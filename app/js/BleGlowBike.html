@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>BLE GlowBike Test</title>
+        <link href="/third-party/bootstrap-5.3.3-dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="/third-party/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+import { BleGlowBike } from "./BleGlowbike.js";
+
+import ss from "/third-party/bootstrap-5.3.3-dist/css/bootstrap.min.css" assert { type: "css" }
+
+
+/////////////////////////////////////////////////////////////////////
+// GlowBikeConfigurationServiceController
+/////////////////////////////////////////////////////////////////////
+
+class GlowBikeConfigurationServiceController extends HTMLElement
+{
+    constructor(svc)
+    {
+        super();
+        this.attachShadow({ mode: 'open' }).adoptedStyleSheets = [ss];
+
+        this.svc_ = svc;
+    }
+
+    async connectedCallback()
+    {
+        let template = document.createElement('template');
+        template.innerHTML = `
+            <div class='card'>
+            GlowBike ConfigurationService Controller
+            <div class='card-body'>
+                <button id='send'>Send</button><input id='sendstr'></input>
+                <br/>
+                <textarea id='receive'></textarea>
+            </div>
+            </div>
+        `;
+
+        this.shadowRoot.appendChild(template.content);
+
+        this.domButtonSend_ = this.shadowRoot.getElementById('send');
+        this.domSendStr_ = this.shadowRoot.getElementById('sendstr');
+        this.domReceive_ = this.shadowRoot.getElementById('receive');
+
+        this.domButtonSend_.addEventListener('click', e => {
+            let val = this.domSendStr_.value;
+
+            this.svc_.Send(val);
+        });
+
+        this.svc_.SetOnReceiveCallback(str => {
+            this.domReceive_.value = this.domReceive_.value + str + "\n";
+        });
+    }
+}
+
+customElements.define('ble-glowbike-configurationservice-controller', GlowBikeConfigurationServiceController);
+
+
+/////////////////////////////////////////////////////////////////////
+// GlowBikeControlServiceController
+/////////////////////////////////////////////////////////////////////
+
+class GlowBikeControlServiceController extends HTMLElement
+{
+    constructor(svc)
+    {
+        super();
+        this.attachShadow({ mode: 'open' }).adoptedStyleSheets = [ss];
+
+        this.svc_ = svc;
+    }
+
+    async connectedCallback()
+    {
+        let template = document.createElement('template');
+        template.innerHTML = `
+            <div class='card'>
+            GlowBike ControlService Controller
+            <div class='card-body'>
+                <button id='send'>Send</button><input id='sendstr'></input>
+            </div>
+            </div>
+        `;
+
+        this.shadowRoot.appendChild(template.content);
+
+        this.domButtonSend_ = this.shadowRoot.getElementById('send');
+        this.domSendStr_ = this.shadowRoot.getElementById('sendstr');
+
+        this.domButtonSend_.addEventListener('click', e => {
+            let val = this.domSendStr_.value;
+
+            this.svc_.Send(val);
+        });
+    }
+}
+
+customElements.define('ble-glowbike-controlservice-controller', GlowBikeControlServiceController);
+
+
+/////////////////////////////////////////////////////////////////////
+// BleGlowBikeController
+/////////////////////////////////////////////////////////////////////
+
+class BleGlowBikeController extends HTMLElement
+{
+    constructor()
+    {
+        super();
+        this.attachShadow({ mode: 'open' }).adoptedStyleSheets = [ss];
+
+        this.bleGlowBike_ = new BleGlowBike();
+    }
+
+    async connectedCallback()
+    {
+        let template = document.createElement('template');
+        template.innerHTML = `
+            <div class='card'>
+            BLE GlowBike Controller
+            <div class='card-body'>
+                <button id='connect'>Connect</button>
+                <button id='disconnect'>Disconnect</button>
+                <span id='status'></span>
+                <br/>
+
+                <div id='container'></div>
+            </div>
+            </div>
+        `;
+
+        this.shadowRoot.appendChild(template.content);
+
+        this.domButtonConnect_ = this.shadowRoot.getElementById('connect');
+        this.domButtonDisconnect_ = this.shadowRoot.getElementById('disconnect');
+        this.domStatus_ = this.shadowRoot.getElementById('status');
+        this.domContainer_ = this.shadowRoot.getElementById('container');
+
+        this.bleGlowBike_.SetOnDisconnectedCallback(() => {
+            this.SetStatus("Disconnected, reconnecting...");
+        });
+
+        this.bleGlowBike_.SetOnReconnectedCallback(() => {
+            this.SetStatus("Re-Connected");
+        });
+
+        this.domButtonConnect_.addEventListener('click', async e => {
+            this.SetStatus(`Connecting...`);
+
+            // empty any prior
+            this.domContainer_.replaceChildren();
+
+            let ok = await this.bleGlowBike_.Connect();
+
+            if (ok)
+            {
+                let role = this.bleGlowBike_.GetRole();
+                let name = this.bleGlowBike_.GetName();
+
+                console.log(`Connected - ${name} - ${role}`);
+                this.SetStatus(`Connected - ${name} - ${role}`);
+
+                let svcConfiguration = this.bleGlowBike_.GetConfigurationService();
+                this.domContainer_.appendChild(new GlowBikeConfigurationServiceController(svcConfiguration))
+
+                if (role == "Leader")
+                {
+                    let svcControl = this.bleGlowBike_.GetControlService();
+                    this.domContainer_.appendChild(new GlowBikeControlServiceController(svcControl));
+                }
+            }
+            else
+            {
+                if (this.bleGlowBike_.ConnectWorkedButWasNotGlowBike())
+                {
+                    console.log("Connect worked but was not a glowbike");
+                    this.SetStatus(`Not Connected - Not a GlowBike`);
+                }
+                else
+                {
+                    console.log("Connect failed or aborted");
+                    this.SetStatus(`Not Connected`);
+                }
+            }
+        });
+        this.domButtonDisconnect_.addEventListener('click', async e => {
+            await this.bleGlowBike_.Disconnect();
+
+            this.SetStatus(`Not Connected`);
+
+            this.domContainer_.replaceChildren();
+        });
+
+        this.SetStatus(`Not Connected`);
+    }
+
+    SetStatus(str)
+    {
+        this.domStatus_.innerHTML = str;
+    }
+}
+
+customElements.define('ble-glowbike-controller', BleGlowBikeController);
+
+
+/////////////////////////////////////////////////////////////////////
+// Init
+/////////////////////////////////////////////////////////////////////
+
+window.addEventListener('DOMContentLoaded', e => {
+    document.body.appendChild(new BleGlowBikeController());
+});
+</script>
+
+    </head>
+
+    <body>
+    </body>
+</html>
