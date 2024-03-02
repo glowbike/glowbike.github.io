@@ -83,8 +83,12 @@ class BleCharacteristicController extends HTMLElement
 
                 <div>
                     <div class='row'>
-                        <div class='col-2'><button id='write'>Write</button></div>
+                        <div class='col-2'><button id='write'>Write Without Response</button></div>
                         <div class='col'><input id='writeval' type='text' placeholder='data to send'></input></div>
+                    </div>
+                    <div class='row'>
+                        <div class='col-2'><button id='writeWithResponse'>Write With Response</button></div>
+                        <div class='col'><input id='writevalWithResponse' type='text' placeholder='data to send'></input></div>
                     </div>
                 </div>
 
@@ -117,6 +121,8 @@ class BleCharacteristicController extends HTMLElement
         this.domValue_ = this.shadowRoot.getElementById('value');
         this.domButtonWriteValue_ = this.shadowRoot.getElementById('write');
         this.domWriteValue_ = this.shadowRoot.getElementById('writeval');
+        this.domButtonWriteWithResponseValue_ = this.shadowRoot.getElementById('writeWithResponse');
+        this.domWriteWithResponseValue_ = this.shadowRoot.getElementById('writevalWithResponse');
         this.domContainer_ = this.shadowRoot.getElementById('container');
 
         this.domButtonGetValue_.addEventListener('click', async e => {
@@ -137,7 +143,16 @@ class BleCharacteristicController extends HTMLElement
             let uint8Array = te.encode(val);
             let arrayBuffer = uint8Array.buffer;
 
-            await this.ctc_.WriteValue(arrayBuffer);
+            await this.ctc_.WriteValueWithNoResponse(arrayBuffer);
+        });
+        this.domButtonWriteWithResponseValue_.addEventListener('click', async e => {
+            let val = this.domWriteWithResponseValue_.value;
+
+            let te = new TextEncoder();
+            let uint8Array = te.encode(val);
+            let arrayBuffer = uint8Array.buffer;
+
+            await this.ctc_.WriteValueWithResponse(arrayBuffer);
         });
 
         this.ctc_.SetOnNotifyCallback((arrayBuffer) => {

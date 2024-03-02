@@ -4,6 +4,22 @@
 // This API is still in flux and varying degrees of support across browswers.
 // Use only features which are supported and useful.
 
+// 0000FFE0-0000-1000-8000-00805F9B34FB is recognized as really being 0xFFE0
+function Uuid128To128Or16(uuid128)
+{
+    uuid128 = uuid128.toUpperCase();
+
+    let retVal = uuid128;
+    let tmpStr = uuid128.substring(0, 4) + "0000" + uuid128.substring(8);
+
+    if (tmpStr == "00000000-0000-1000-8000-00805F9B34FB")
+    {
+        retVal = "0x" + uuid128.substring(4, 8);
+    }
+
+    return retVal;
+}
+
 
 /////////////////////////////////////////////////////////////////////
 // Utility
@@ -41,33 +57,12 @@ export class ByteList
 }
 
 
-
-
-// Leaders have:
-// - Control Service
-// - Configuration Service
-
-// Followers have:
-// - Configuration Service
-
-
-// Services:
-// - Control Service (0x1111)
-//   - Serial Characteristic (0xFFE1)
-//
-// - Configuration Service (0xFFE0)
-//   - Serial Characteristic (0xFFE1)
-
 /////////////////////////////////////////////////////////////////////
 // Ble
 /////////////////////////////////////////////////////////////////////
 
 export class Ble
 {
-    static SERVICE_CONFIGURATION_UUID = 0x1111;
-    static SERVICE_CONTROL_UUID       = 0xFFE0;
-    static CTC_SERIAL_UUID            = 0xFFE1;
-
     constructor()
     {
         this.devList_ = new Map();
@@ -82,17 +77,34 @@ export class Ble
         }
     }
 
-    async GetDevice()
+    // only supports filtering by 16-bit UUIDs for now
+    // filterUuid is a string in the form of "0x1234" or "1234"
+    async GetDevice(filterUuid)
     {
         let retVal = null;
 
         try
         {
-            let dev = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { services: [Ble.SERVICE_CONFIGURATION_UUID] },
-                ],
-            });
+            let filter = {};
+
+            if (filterUuid != undefined)
+            {
+                let filterUuidInt = parseInt(filterUuid, 16);
+
+                filter = {
+                    filters: [
+                        { services: [filterUuidInt] },
+                    ],
+                };
+            }
+            else
+            {
+                filter = {
+                    acceptAllDevices: true,
+                };
+            }
+
+            let dev = await navigator.bluetooth.requestDevice(filter);
 
             if (this.devList_.has(dev.id) == false)
             {
@@ -127,7 +139,7 @@ export class Ble
 
 class BleDevice
 {
-    constructor (dev)
+    constructor(dev)
     {
         this.dev_ = dev;
         this.gattServer_ = null;
@@ -198,6 +210,8 @@ class BleDevice
         }
 
         this.OnConnected();
+
+        return this.gattServer_ != null;
     }
 
     Disconnect()
@@ -287,7 +301,7 @@ class BleService
 
     GetUuid()
     {
-        return this.svc_.uuid.toUpperCase();
+        return Uuid128To128Or16(this.svc_.uuid);
     }
 
     async GetCharacteristicList()
@@ -333,7 +347,7 @@ class BleCharacteristic
 
     GetUuid()
     {
-        return this.ctc_.uuid.toUpperCase();
+        return Uuid128To128Or16(this.ctc_.uuid);
     }
 
     GetProperties()
@@ -359,15 +373,27 @@ class BleCharacteristic
         return retVal;
     }
 
-    async WriteValue(arrayBuffer)
+    async WriteValueWithResponse(arrayBuffer)
     {
         try
         {
-            await this.ctc_.writeValue(arrayBuffer);
+            await this.ctc_.writeValueWithResponse(arrayBuffer);
         }
         catch (e)
         {
-            console.log(`BleCharacteristic WriteValue ERR: ${e}`);
+            console.log(`BleCharacteristic WriteValueWithResonse ERR: ${e}`);
+        }
+    }
+
+    async WriteValueWithNoResponse(arrayBuffer)
+    {
+        try
+        {
+            await this.ctc_.writeValueWithoutResponse(arrayBuffer);
+        }
+        catch (e)
+        {
+            console.log(`BleCharacteristic WriteValueWithoutResonse ERR: ${e}`);
         }
     }
 
@@ -474,7 +500,7 @@ class BleDescriptor
 
     GetUuid()
     {
-        return this.desc_.uuid.toUpperCase();
+        return Uuid128To128Or16(this.desc_.uuid);
     }
 
     async ReadValue()
