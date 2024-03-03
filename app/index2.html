@@ -88,7 +88,68 @@ html, body {
     <div class="menuBar"></div>
 </div>
 
+<script>
+'strict';
 
+let MENU_HEIGHT;
+
+function SetupMenu()
+{
+    // Set up the menu to be the right size
+    let domMenu = document.getElementById('menu');
+    menu.style.height = `${MENU_HEIGHT}px`;
+    menu.style.width  = `${MENU_HEIGHT}px`;
+
+    function SwitchTo(screen)
+    {
+        let domConfigurationScreen = document.getElementById("GlowBikeConfigurationScreen");
+        let domControlScreen       = document.getElementById("GlowBikeControlScreen");
+
+        if (screen == "Configuration")
+        {
+            domControlScreen.style.zIndex       = 0;
+            domConfigurationScreen.style.zIndex = 1;
+        }
+        else    // Control
+        {
+            domControlScreen.style.zIndex       = 1;
+            domConfigurationScreen.style.zIndex = 0;
+        }
+    }
+
+    let tinyPopupMenu = new TinyPopupMenu({
+        autoclose: true,
+        position: TinyPopupMenu.Position.Bottom,
+        margin: 5,
+        offset: { x: 0, y: 0 },
+        className: 'tinypopup',
+        arrow: false,
+        menuItems: [
+            {
+                content: 'Configuration Screen',
+                callback: () => {
+                    SwitchTo("Configuration");
+                },
+            },
+            {
+                content: 'Color Control Screen',
+                callback: () => {
+                    SwitchTo("Control");
+                },
+                className: 'disabled',
+            },
+            '-',
+            {
+                content: 'Help',
+                callback: () => window.open("/app/help", "_blank"),
+                className: 'delete'
+            }
+        ]
+    });
+
+    tinyPopupMenu.addToggler(document.getElementById('menu'), {}, 'click');
+}
+</script>
 
 
 
@@ -124,7 +185,14 @@ html, body {
     Configuration Screen
 </div>
 
+<script>
+'strict';
 
+function SetupGlowBikeConfigurationScreen()
+{
+
+}
+</script>
 
 
 
@@ -240,7 +308,7 @@ html, body {
     #bRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
     #bRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
     
-    </style>
+</style>
     
     <div id="GlowBikeControlScreen" class="flex-vertical gap-between">
         <div class="inputRow gap-between">
@@ -282,7 +350,246 @@ html, body {
         </div>
     </div>
     
+<script>
+'strict';
+
+
+
+/////////////////////////////////////////////////////////////////////
+// State
+/////////////////////////////////////////////////////////////////////
+
+let colorWheel;
+
+let domCheckRed   = document.getElementById('rCheck');
+let domCheckGreen = document.getElementById('gCheck');
+let domCheckBlue  = document.getElementById('bCheck');
+
+let domSliderBrightness = document.getElementById('pctRange');
+
+let domSliderRed   = document.getElementById('rRange');
+let domSliderGreen = document.getElementById('gRange');
+let domSliderBlue  = document.getElementById('bRange');
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+// Message sending
+/////////////////////////////////////////////////////////////////////
+
+function TransmitRGB()
+{
+    console.log(`glow.rgb ${domSliderRed.value} ${domSliderGreen.value} ${domSliderBlue.value}`);
+}
+
+function TransmitPct(pct)
+{
+    console.log(`glow.pct ${pct}`);
+}
+
+function TransmitRed()
+{
+    console.log(`glow.mrl ${domSliderRed.value}`);
+}
+
+function TransmitGreen()
+{
+    console.log(`glow.mgl ${domSliderGreen.value}`);
+}
+function TransmitBlue()
+{
+    console.log(`glow.mbl ${domSliderBlue.value}`);
+}
+
+function TransmitRedAutomatic()
+{
+    console.log("glow.mro");
+}
+
+function TransmitGreenAutomatic()
+{
+    console.log("glow.mgo");
+}
+
+function TransmitBlueAutomatic()
+{
+    console.log("glow.mbo");
+}
+
+
+/////////////////////////////////////////////////////////////////////
+// Color Input Handling
+/////////////////////////////////////////////////////////////////////
+
+function OnWheelChange(r, g, b)
+{
+    domCheckRed.checked   = false;
+    domCheckGreen.checked = false;
+    domCheckBlue.checked  = false;
     
+    domSliderRed.value   = r;
+    domSliderGreen.value = g;
+    domSliderBlue.value  = b;
+
+    TransmitRGB();
+}
+
+
+
+
+function OnSliderBrightnessChange()
+{
+    TransmitPct(domSliderBrightness.value);
+}
+
+let IN_SLIDER_CALLBACK = false;
+function SetWheelColorFromSliders()
+{
+    IN_SLIDER_CALLBACK = true;
+
+    colorWheel.rgb = [
+        domSliderRed.value,
+        domSliderGreen.value,
+        domSliderBlue.value,
+    ];
+
+    IN_SLIDER_CALLBACK = false;
+}
+
+function OnSliderRedChange()
+{
+    domCheckRed.checked = false;
+    SetWheelColorFromSliders();
+    TransmitRed();
+}
+
+function OnSliderGreenChange()
+{
+    domCheckGreen.checked = false;
+    SetWheelColorFromSliders();
+    TransmitGreen();
+}
+
+function OnSliderBlueChange()
+{
+    domCheckBlue.checked = false;
+    SetWheelColorFromSliders();
+    TransmitBlue();
+}
+
+// Transition control back to the slider by pretending an event fired
+function OnCheckRedChange()
+{
+    if (domCheckRed.checked) { TransmitRedAutomatic(); } else { OnSliderRedChange(); }
+}
+
+function OnCheckGreenChange()
+{
+    if (domCheckGreen.checked) { TransmitGreenAutomatic(); } else { OnSliderGreenChange(); }
+}
+
+function OnCheckBlueChange()
+{
+    if (domCheckBlue.checked) { TransmitBlueAutomatic(); } else { OnSliderBlueChange(); }
+}
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+// Init
+/////////////////////////////////////////////////////////////////////
+
+let RGB_START = [200, 40, 200];
+
+function SetupColorWheel()
+{
+    let c = document.getElementById('colorwheel-container');
+
+    let wheelDiameter = Math.max(c.offsetHeight, c.offsetWidth);
+
+    colorWheel = new ReinventedColorWheel({
+        appendTo: document.getElementById("colorwheel"),
+
+        // initial color (can be specified in hsv / hsl / rgb / hex)
+        rgb: RGB_START,
+
+        // appearance
+        wheelDiameter: wheelDiameter,
+        wheelThickness: 50,
+        handleDiameter: 50,
+        wheelReflectsSaturation: false,
+
+        // on change
+        onChange: (color) => {
+            if (IN_SLIDER_CALLBACK == false)
+            {
+                OnWheelChange(color.rgb[0], color.rgb[1],  color.rgb[2]);
+            }
+        },
+    });
+}
+
+function SetupRanges()
+{
+    domSliderBrightness.addEventListener('input', e => { OnSliderBrightnessChange(); })
+
+    domSliderRed.addEventListener('input',   e => { OnSliderRedChange();   });
+    domSliderGreen.addEventListener('input', e => { OnSliderGreenChange(); });
+    domSliderBlue.addEventListener('input',  e => { OnSliderBlueChange();  });
+
+    domSliderRed.value   = RGB_START[0];
+    domSliderGreen.value = RGB_START[1];
+    domSliderBlue.value  = RGB_START[2];
+}
+
+function SetupChecks()
+{
+    domCheckRed.addEventListener('change',   e => { OnCheckRedChange()   });
+    domCheckGreen.addEventListener('change', e => { OnCheckGreenChange() });
+    domCheckBlue.addEventListener('change',  e => { OnCheckBlueChange()  });
+}
+
+function SetupHeights()
+{
+    let gbcContainer = document.getElementById("GlowBikeControlScreen");
+
+    // How tall are the rows?
+    let rowList = gbcContainer.getElementsByClassName("inputRow");
+    let height = rowList[0].offsetHeight;
+
+    // let the menu know about this also
+    MENU_HEIGHT = height;
+
+    let inputList = gbcContainer.getElementsByTagName("input");
+    for (let input of inputList)
+    {
+        if (input.type == "checkbox")
+        {
+            input.style.height = `${height}px`;
+            input.style.width  = `${height}px`;
+        }
+        else if (input.type == "range")
+        {
+            input.style.height = `${height}px`;
+        }
+    }
+}
+
+function SetupGlowBikeControlScreen()
+{
+    SetupColorWheel();
+    SetupRanges();
+    SetupChecks();
+    SetupHeights();
+}
+</script>
+
+
+
+
 
 
 
@@ -314,8 +621,25 @@ html, body {
 <div id="JankHider">
 </div>
 
-    
+<script>
+function SetupJankHider()
+{
+    let jankHider = document.getElementById("JankHider");
+    jankHider.parentNode.removeChild(jankHider);
+}
+</script>
         
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -324,138 +648,11 @@ html, body {
 
 <script>
 'strict';
-
-function SetupColorWheel()
-{
-    let c = document.getElementById('colorwheel-container');
-
-    console.log(`wheel container height: ${c.offsetHeight}, width: ${c.offsetWidth}`);
-    let wheelDiameter = Math.max(c.offsetHeight, c.offsetWidth);
-    console.log(`wheelDiameter: ${wheelDiameter}`);
-
-    let colorWheel = new ReinventedColorWheel({
-        appendTo: document.getElementById("colorwheel"),
-
-        // initial color (can be specified in hsv / hsl / rgb / hex)
-        hsv: [0, 100, 100],
-        // hsl: [0, 100, 50],
-        // rgb: [255, 0, 0],
-        // hex: "#ff0000",
-
-        // appearance
-        wheelDiameter: wheelDiameter,
-        wheelThickness: 50,
-        handleDiameter: 50,
-        wheelReflectsSaturation: false,
-
-        onChange: (color) => {
-            // the only argument is the ReinventedColorWheel instance itself.
-            // console.log("hsv:", color.hsv[0], color.hsv[1], color.hsv[2]);
-        },
-    });
-}
-
-function SetupGlowBikeControlScreen()
-{
-    let gbcContainer = document.getElementById("GlowBikeControlScreen");
-
-    console.log(`Control Screen size start: h: ${gbcContainer.offsetHeight}, w: ${gbcContainer.offsetWidth}`);
-
-    // How tall are the rows?
-    console.log("how tall are the rows?");
-
-    let rowList = gbcContainer.getElementsByClassName("inputRow");
-    for (let row of rowList)
-    {
-        console.log(`row height: ${row.offsetHeight}, width: ${row.offsetWidth}`);
-    }
-
-    let height = rowList[0].offsetHeight;
-
-    let inputList = gbcContainer.getElementsByTagName("input");
-
-    for (let input of inputList)
-    {
-        if (input.type == "checkbox")
-        {
-            input.style.height = `${height}px`;
-            input.style.width  = `${height}px`;
-        }
-        else if (input.type == "range")
-        {
-            input.style.height = `${height}px`;
-        }
-    }
-
-    console.log(`Control Screen size end: h: ${gbcContainer.offsetHeight}, w: ${gbcContainer.offsetWidth}`);
-
-
-    
-    // Set up the menu to be the right size
-    let domMenu = document.getElementById('menu');
-    menu.style.height = `${height}px`;
-    menu.style.width  = `${height}px`;
-
-    function SwitchTo(screen)
-    {
-        let domConfigurationScreen = document.getElementById("GlowBikeConfigurationScreen");
-        let domControlScreen       = document.getElementById("GlowBikeControlScreen");
-
-        if (screen == "Configuration")
-        {
-            domControlScreen.style.zIndex       = 0;
-            domConfigurationScreen.style.zIndex = 1;
-        }
-        else    // Control
-        {
-            domControlScreen.style.zIndex       = 1;
-            domConfigurationScreen.style.zIndex = 0;
-        }
-    }
-
-    let tinyPopupMenu = new TinyPopupMenu({
-        autoclose: true,
-        position: TinyPopupMenu.Position.Bottom,
-        margin: 5,
-        offset: { x: 0, y: 0 },
-        className: 'tinypopup',
-        arrow: false,
-        menuItems: [
-            {
-                content: 'Configuration Screen',
-                callback: () => {
-                    SwitchTo("Configuration");
-                },
-            },
-            {
-                content: 'Control Screen',
-                callback: () => {
-                    SwitchTo("Control");
-                },
-                className: 'disabled',
-            },
-            '-',
-            {
-                content: 'Help',
-                callback: () => window.open("/app/help", "_blank"),
-                className: 'delete'
-            }
-        ]
-    });
-
-    tinyPopupMenu.addToggler(document.getElementById('menu'), {}, 'click');
-}
-
-function SetupJankHiderFadeAway()
-{
-    let jankHider = document.getElementById("JankHider");
-    jankHider.parentNode.removeChild(jankHider);
-}
-
 window.addEventListener('DOMContentLoaded', e => {
-    SetupColorWheel();
+    SetupGlowBikeConfigurationScreen();
     SetupGlowBikeControlScreen();
-    SetupJankHiderFadeAway();
+    SetupMenu();
+    SetupJankHider();
 });
 </script>
     
