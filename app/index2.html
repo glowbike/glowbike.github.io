@@ -1,0 +1,298 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Glow Bike</title>
+
+    <link rel="stylesheet" type="text/css" href="./third-party/reinvented-color-wheel.min.css">
+    <script src="./third-party/reinvented-color-wheel.min.js"></script>
+
+
+<script>
+'strict';
+
+
+window.addEventListener('DOMContentLoaded', e => {
+
+
+
+// return;
+
+
+    let c = document.getElementById('colorwheel-container');
+
+console.log(`wheel container height: ${c.offsetHeight}, width: ${c.offsetWidth}`);
+
+let wheelDiameter = Math.max(c.offsetHeight, c.offsetWidth);
+
+console.log(`wheelDiameter: ${wheelDiameter}`);
+
+
+
+
+    let colorWheel = new ReinventedColorWheel({
+  // appendTo is the only required property. specify the parent element of the color wheel.
+  appendTo: document.getElementById("colorwheel"),
+
+  // followings are optional properties and their default values.
+
+  // initial color (can be specified in hsv / hsl / rgb / hex)
+  hsv: [0, 100, 100],
+  // hsl: [0, 100, 50],
+  // rgb: [255, 0, 0],
+  // hex: "#ff0000",
+
+  // appearance
+//   wheelDiameter: 400,
+  wheelDiameter: wheelDiameter,
+  wheelThickness: 100,
+  handleDiameter: 100,
+  wheelReflectsSaturation: false,
+
+  // handler
+  onChange: function (color) {
+    // the only argument is the ReinventedColorWheel instance itself.
+    // console.log("hsv:", color.hsv[0], color.hsv[1], color.hsv[2]);
+  },
+});
+
+
+
+
+
+
+
+
+
+
+// How tall are the rows?
+console.log("how tall are the rows?");
+let gbcContainer = document.getElementById("GlowBikeControl");
+let rowList = gbcContainer.getElementsByClassName("inputRow");
+for (let row of rowList)
+{
+    console.log(`row height: ${row.offsetHeight}, width: ${row.offsetWidth}`);
+}
+
+let height = rowList[0].offsetHeight;
+
+let inputList = gbcContainer.getElementsByTagName("input");
+
+for (let input of inputList)
+{
+    if (input.type == "checkbox")
+    {
+        // console.log(`offsetHeight: ${input.offsetHeight}`)
+
+        input.style.height = `${height}px`;
+        input.style.width  = `${height}px`;
+
+        // console.log(`made height ${input.style.height}`);
+    }
+    else if (input.type == "range")
+    {
+        // console.log("range")
+        // console.dir(input);
+
+        input.style.height = `${height}px`;
+
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+});
+</script>
+
+<style>
+html, body {
+    background-color: black;
+    border: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+input[type=checkbox] {
+    margin: 0px;
+}
+
+input[type=button] {
+    height: 100%;
+    font-size: 3.5rem;
+    background-color: #555555;
+    border: #555555;
+    flex: 1;
+}
+
+.flex-vertical {
+    display: flex;
+    flex-direction: column;
+}
+
+.maximize {
+    flex: 1;
+}
+
+.inputRow {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    align-items: center;
+}
+
+#colorwheel-container {
+    background-color: white;
+    flex: 1;
+}
+
+#GlowBikeControl {
+    width: 100%;
+    height: 100%;
+}
+
+/* specify a little spacing between every element */
+.gap-between {
+    gap: 2px;
+}
+
+
+
+
+
+
+
+
+
+/*
+Adapted from : https://codepen.io/bgebelein/pen/wvYeapy
+*/
+
+input[type=range] {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 6rem;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0;
+  box-shadow: -100rem 0 0 100rem rgba(255, 255, 255, 0.2);
+}
+input[type=range]::-moz-range-thumb {
+  border: none;
+  width: 0;
+  box-shadow: -100rem 0 0 100rem rgba(255, 255, 255, 0.2);
+}
+
+/* give specific colors for certain sliders */
+#rRange                       { background-color:              rgba(255,   0,   0, 0.2); }
+#rRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 0.2); }
+#rRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 0.2); }
+
+#gRange                       { background-color:              rgba(  0, 255,   0, 0.2); }
+#gRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 0.2); }
+#gRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 0.2); }
+
+#bRange                       { background-color:              rgba(  0,   0, 255, 0.2); }
+#bRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 0.2); }
+#bRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 0.2); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+</head>
+
+
+
+<body>
+
+<div id="GlowBikeControl" class="flex-vertical gap-between">
+    <div class="inputRow gap-between">
+        <input type='checkbox'>
+        <div class="flex-vertical maximize">
+            <input type='range' min='0' max='100' value='30' id='pctRange'>
+        </div>
+    </div>
+
+    <div id="colorwheel-container">
+        <div id='colorwheel'></div>
+    </div>
+
+    <div class="inputRow gap-between">
+        <input type='checkbox' id='rCheck' checked>
+        <div class="flex-vertical maximize">
+            <input type='range' min='0' max='255' id='rRange'>
+        </div>
+    </div>
+
+    <div class="inputRow gap-between">
+        <input type='checkbox' id='gCheck' checked>
+        <div class="flex-vertical maximize">
+            <input type='range' min='0' max='255' id='gRange'>
+        </div>
+    </div>
+
+    <div class="inputRow gap-between">
+        <input type='checkbox' id='bCheck' checked>
+        <div class="flex-vertical maximize">
+            <input type='range' min='0' max='255' id='bRange'>
+        </div>
+    </div>
+
+    <div class="inputRow gap-between">
+        <input type='button' id='connectToggle' value='Connect'>
+        <input type='button' id='bStartPause' value='Start/Pause'>
+        <input type='button' id='bStop' value='Stop'>
+    </div>
+</div>
+
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
