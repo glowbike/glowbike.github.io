@@ -1,12 +1,33 @@
 <!doctype html>
 <html>
-    <script src="./bluetooth-terminal/src/BluetoothTerminal.js"></script>
+
+
+    // should async load all of this so app starts immediately?
+    <!-- <script src="./bluetooth-terminal/src/BluetoothTerminal.js"></script> -->
     <script src="./colorjoe/dist/colorjoe.js"></script>
 
-    <script>
-'strict';
+    <script type="module">
+import { BleGlowBike } from "./js/BleGlowBike.js"
 
-let BTC = new BluetoothTerminal();
+// https://web.dev/learn/pwa/windows
+// function  WakeLock()
+// {
+//     // Request a screen wake lock
+//     const wakeLock = await navigator.wakeLock.request();
+
+//     // Listen for wake lock release
+//     wakeLock.addEventListener('release', () => {
+//         console.log(`Screen Wake Lock released: ${wakeLock.released}`);
+//     });
+
+//     // Manually release the wake lock
+//     wakeLock.release();
+// }
+
+
+// let BTC = new BluetoothTerminal();
+let glowBike = new BleGlowBike();
+let glowBikeController = null;
 
 let joe = null;
 let JOEIGNORE = 0;
@@ -54,25 +75,25 @@ function OnLoad()
     });
 
     document.getElementById('bStart').addEventListener("click", (e) => {
-        Send("start");
+        Send("glow.start");
     });
 
     document.getElementById('bPause').addEventListener("click", (e) => {
-        Send("pause");
+        Send("glow.pause");
     });
 
     document.getElementById('bStop').addEventListener("click", (e) => {
-        Send("stop");
+        Send("glow.stop");
     });
 
 
     document.getElementById('bSyncOn').addEventListener("click", (e) => {
-        Send("sync 5");
+        Send("glow.sync 5");
     });
 
 
     document.getElementById('bSyncOff').addEventListener("click", (e) => {
-        Send("sync 0");
+        Send("glow.sync 0");
     });
 
 
@@ -84,49 +105,53 @@ function OnLoad()
     domJoe.style.margin = "0";
 }
 
-function OnConnectToggle(domButton)
+async function OnConnectToggle(domButton)
 {
     if (domButton.value == "Connect")
     {
         domButton.style = "background-color: yellow; border: yellow;";
 
-        BTC.connect().then(() => {
-            console.log(`Connected: ${BTC.getDeviceName()}`);
+        let ok = await glowBike.Connect();
 
-            domButton.style = "background-color: green; border: green;";
-            domButton.value = "Break";
+        if (ok)
+        {
+            if (glowBike.GetRole() == "Leader")
+            {
+                glowBikeController = glowBike.GetControlService();
+                console.log(`Connected: ${glowBike.GetName()}`);
+    
+                domButton.style = "background-color: green; border: green;";
+                domButton.value = "Break";
+    
+                glowBike.SetOnDisconnectedCallback(() => {
+                    OnDisconnect(domButton);
+                });
+    
+                // Trigger applying UI settings on connect
+                OnPctRange(document.getElementById('pctRange'));
+                OnRCheck(document.getElementById('rCheck'));
+                OnGCheck(document.getElementById('gCheck'));
+                OnBCheck(document.getElementById('bCheck'));
+            }
+            else
+            {
+                glowBike.Disconnect();
 
-            BTC.setOnDisconnected(() => {
-                OnDisconnect(domButton);
-            });
+                console.log(`GlowBike wasn't Leader`);
 
-            // Trigger applying UI settings on connect
-            OnPctRange(document.getElementById('pctRange'));
-            OnRCheck(document.getElementById('rCheck'));
-            OnGCheck(document.getElementById('gCheck'));
-            OnBCheck(document.getElementById('bCheck'));
-        }).catch(() => {
+                domButton.style = "background-color: red; border: red;";
+            }
+        }
+        else
+        {
             console.log(`Connect Failed`);
 
             domButton.style = "background-color: red; border: red;";
-
-            // Bugfix workaround
-            //
-            // If connected, then power off the BT device, then:
-            // - first attempt to re-connect fails after the terminal-internal
-            //   attempt to re-connect to the first host (not that I asked it to)
-            // - second attempt does the same thing
-            // - I never get the option to pick a connect target again
-            //
-            // If I purposefully disconnect here, then the 2nd connect attempt
-            // at least will bring up connect target window again.
-            //
-            BTC.disconnect();
-        });
+        }
     }
     else
     {
-        BTC.disconnect();
+        glowBike.Disconnect();
 
         domButton.style = "";
         domButton.value = "Connect";
@@ -142,45 +167,18 @@ function OnDisconnect(domButton)
 }
 
 
-// Line-oriented
-// pass "ABC" to get "ABC\n" sent.
-const Q = new Queue();
-let sendInProgress = false;
-function Send(data)
+async function Send(data)
 {
-    // Console already appends strictly '\n' so no need to change this
+    let obj = {
+        type: "SHELL_COMMAND",
+        cmd: data,
+    };
 
-    let fnDequeueNext = () => {
-        if (!Q.isEmpty())
-        {
-            let dataNext = Q.dequeue();
+    let objJson = JSON.stringify(obj)
 
-            Send(dataNext);
-        }
-    }
+    console.log(`Sending: ${objJson}`);
 
-    if (!sendInProgress)
-    {
-        sendInProgress = true;
-
-        console.log(`Sending: ${data}`);
-
-        BTC.send(data).then(() => {
-            sendInProgress = false;
-
-            fnDequeueNext();
-        }).catch(() => {
-            // catch errors from not being connected but UI being used
-
-            sendInProgress = false;
-
-            fnDequeueNext();
-        });
-    }
-    else
-    {
-        Q.enqueue(data);
-    }
+    await glowBikeController.Send(objJson);
 }
 
 
@@ -194,7 +192,7 @@ function OnColorInProgress(hexValRgb)
         let decValG = parseInt("0x" + hexValRgb.substring(3, 5));
         let decValB = parseInt("0x" + hexValRgb.substring(5, 8));
 
-        Send(`rgb ${decValR} ${decValG} ${decValB}`);
+        Send(`glow.rgb ${decValR} ${decValG} ${decValB}`);
 
         UpdateRGBSliders(hexValRgb);
         
@@ -217,14 +215,14 @@ function UpdateRGBSliders(hexValRgb)
 
 function OnPctRange(domSlider)
 {
-    Send(`pct ${domSlider.value}`);
+    Send(`glow.pct ${domSlider.value}`);
 }
 
 function OnRCheck(domCheck)
 {
     if (domCheck.checked)
     {
-        Send("mro");
+        Send("glow.mro");
     }
     else
     {
@@ -236,7 +234,7 @@ function OnGCheck(domCheck)
 {
     if (domCheck.checked)
     {
-        Send("mgo");
+        Send("glow.mgo");
     }
     else
     {
@@ -248,7 +246,7 @@ function OnBCheck(domCheck)
 {
     if (domCheck.checked)
     {
-        Send("mbo");
+        Send("glow.mbo");
     }
     else
     {
@@ -259,21 +257,21 @@ function OnBCheck(domCheck)
 
 function OnRRange(domSlider)
 {
-    Send(`mrl ${domSlider.value}`);
+    Send(`glow.mrl ${domSlider.value}`);
 
     document.getElementById('rCheck').checked = false;
     UpdateJoeFromSlider();
 }
 function OnGRange(domSlider)
 {
-    Send(`mgl ${domSlider.value}`);
+    Send(`glow.mgl ${domSlider.value}`);
 
     document.getElementById('gCheck').checked = false;
     UpdateJoeFromSlider();
 }
 function OnBRange(domSlider)
 {
-    Send(`mbl ${domSlider.value}`);
+    Send(`glow.mbl ${domSlider.value}`);
 
     document.getElementById('bCheck').checked = false;
     UpdateJoeFromSlider();
@@ -310,34 +308,14 @@ function UpdateJoeFromSlider()
 
 
 
-// https://www.javascripttutorial.net/javascript-queue/
 
-function Queue() {
-   this.elements = [];
-}
 
-Queue.prototype.enqueue = function (e) {
-   this.elements.push(e);
-};
 
-// remove an element from the front of the queue
-Queue.prototype.dequeue = function () {
-    return this.elements.shift();
-};
 
-// check if the queue is empty
-Queue.prototype.isEmpty = function () {
-    return this.elements.length == 0;
-};
+// try to go fullscreen using fullscreen api
 
-// get the element at the front of the queue
-Queue.prototype.peek = function () {
-    return !this.isEmpty() ? this.elements[0] : undefined;
-};
-
-Queue.prototype.length = function() {
-    return this.elements.length;
-}
+// set screen orientation
+// set screen lock in this pos
 
 
 
@@ -345,11 +323,9 @@ Queue.prototype.length = function() {
 
 
 
-
-
-
-
-
+window.addEventListener('DOMContentLoaded', e => {
+    OnLoad();
+});
 
 
     </script>
@@ -382,7 +358,7 @@ Queue.prototype.length = function() {
     </style>
 
     <head>
-        <title>Bike Lights</title>
+        <title>GlowBike</title>
 
         <meta charset="UTF-8">
 
@@ -404,8 +380,7 @@ Queue.prototype.length = function() {
 
 
 
-
-        <body onload='OnLoad()'>
+        <body>
             <input type='range' min='0' max='100' value='30' id='pctRange' style='width: 100%'>
 
             <br>
