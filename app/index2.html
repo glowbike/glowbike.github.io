@@ -51,7 +51,7 @@ html, body {
 <style>
 
 .tinypopup {
-    font-size: 2rem;
+    font-size: 1.5rem;
     text-align: left;
 }
 
@@ -169,7 +169,7 @@ html, body {
     
     input[type=button] {
         height: 100%;
-        font-size: 2rem;
+        font-size: 1.3rem;
         background-color: #555555;
         border: #555555;
         flex: 1;
@@ -192,7 +192,6 @@ html, body {
     }
     
     #colorwheel-container {
-        background-color: white;
         flex: 1;
     }
     
@@ -209,37 +208,37 @@ html, body {
     input[type=range] {
         appearance: none;
         -webkit-appearance: none;
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: rgba(255, 255, 255, 0.3);
         margin: 0;
         padding: 0;
         width: 100%;
-        height: 6rem;
+        height: 1rem;
         border-radius: 1rem;
         overflow: hidden;
     }
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
       width: 0;
-      box-shadow: -100rem 0 0 100rem rgba(255, 255, 255, 0.2);
+      box-shadow: -100rem 0 0 100rem rgba(255, 255, 255, 1.0);
     }
     input[type=range]::-moz-range-thumb {
       border: none;
       width: 0;
-      box-shadow: -100rem 0 0 100rem rgba(255, 255, 255, 0.2);
+      box-shadow: -100rem 0 0 100rem rgba(255, 255, 255, 1.0);
     }
     
     /* give specific colors for certain sliders */
-    #rRange                       { background-color:              rgba(255,   0,   0, 0.2); }
-    #rRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 0.2); }
-    #rRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 0.2); }
+    #rRange                       { background-color:              rgba(255,   0,   0, 0.3); }
+    #rRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 1.0); }
+    #rRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 1.0); }
     
-    #gRange                       { background-color:              rgba(  0, 255,   0, 0.2); }
-    #gRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 0.2); }
-    #gRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 0.2); }
+    #gRange                       { background-color:              rgba(  0, 255,   0, 0.3); }
+    #gRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 1.0); }
+    #gRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 1.0); }
     
-    #bRange                       { background-color:              rgba(  0,   0, 255, 0.2); }
-    #bRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 0.2); }
-    #bRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 0.2); }
+    #bRange                       { background-color:              rgba(  0,   0, 255, 0.3); }
+    #bRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
+    #bRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
     
     </style>
     
@@ -345,8 +344,8 @@ function SetupColorWheel()
 
         // appearance
         wheelDiameter: wheelDiameter,
-        wheelThickness: 100,
-        handleDiameter: 100,
+        wheelThickness: 50,
+        handleDiameter: 50,
         wheelReflectsSaturation: false,
 
         onChange: (color) => {
@@ -358,9 +357,13 @@ function SetupColorWheel()
 
 function SetupGlowBikeControlScreen()
 {
+    let gbcContainer = document.getElementById("GlowBikeControlScreen");
+
+    console.log(`Control Screen size start: h: ${gbcContainer.offsetHeight}, w: ${gbcContainer.offsetWidth}`);
+
     // How tall are the rows?
     console.log("how tall are the rows?");
-    let gbcContainer = document.getElementById("GlowBikeControlScreen");
+
     let rowList = gbcContainer.getElementsByClassName("inputRow");
     for (let row of rowList)
     {
@@ -384,6 +387,10 @@ function SetupGlowBikeControlScreen()
         }
     }
 
+    console.log(`Control Screen size end: h: ${gbcContainer.offsetHeight}, w: ${gbcContainer.offsetWidth}`);
+
+
+    
     // Set up the menu to be the right size
     let domMenu = document.getElementById('menu');
     menu.style.height = `${height}px`;
