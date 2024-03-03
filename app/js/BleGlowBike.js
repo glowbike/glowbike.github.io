@@ -57,9 +57,9 @@ class GlowBikeConfigurationService
         this.fnOnReceive_ = fn;
     }
     
-    Send(str)
+    async Send(str)
     {
-        this.ctc_.WriteValueWithResponse(new TextEncoder().encode(str));
+        await this.ctc_.WriteValueWithResponse(new TextEncoder().encode(str));
     }
 }
 
@@ -77,9 +77,9 @@ class GlowBikeControlService
         this.ctc_ = ctc;
     }
     
-    Send(str)
+    async Send(str)
     {
-        this.ctc_.WriteValueWithNoResponse(new TextEncoder().encode(str));
+        await this.ctc_.WriteValueWithNoResponse(new TextEncoder().encode(str));
     }
 }
 

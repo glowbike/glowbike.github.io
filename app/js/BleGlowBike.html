@@ -29,6 +29,12 @@ class GlowBikeConfigurationServiceController extends HTMLElement
     {
         let template = document.createElement('template');
         template.innerHTML = `
+            <style>
+                textarea {
+                    resize: both;
+                    overflow: auto;
+                }
+            </style>
             <div class='card'>
             GlowBike ConfigurationService Controller
             <div class='card-body'>
@@ -45,14 +51,14 @@ class GlowBikeConfigurationServiceController extends HTMLElement
         this.domSendStr_ = this.shadowRoot.getElementById('sendstr');
         this.domReceive_ = this.shadowRoot.getElementById('receive');
 
-        this.domButtonSend_.addEventListener('click', e => {
+        this.domButtonSend_.addEventListener('click', async e => {
             let val = this.domSendStr_.value;
 
-            this.svc_.Send(val);
+            await this.svc_.Send(val);
         });
 
         this.svc_.SetOnReceiveCallback(str => {
-            this.domReceive_.value = this.domReceive_.value + str + "\n";
+            this.domReceive_.innerHTML += this.domReceive_.value + str + "\n";
         });
     }
 }
