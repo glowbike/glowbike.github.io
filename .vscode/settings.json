@@ -1,0 +1,11 @@
+{
+    "liveServer.settings.https":   
+    {
+        "enable"    : true,
+        // "cert"      : "D:\\https\\primary.crt", //full path of the certificate  
+        // "key"       : "D:\\https\\private.key", //full path of the private key  
+        "cert"      : "c:/users/dougl/git/glowbike.github.io/localhost/server.crt",
+        "key"       : "c:/users/dougl/git/glowbike.github.io/localhost/server.key",
+        "passphrase": "abc123"
+    }
+}

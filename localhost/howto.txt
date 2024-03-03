@@ -1,0 +1,43 @@
+This is for generating an ssl self-signed cert for serving up webpages from localhost, but having the browser ok them for advanced features (ie bluetooth) for development purposes.
+
+There is no security risk with having these files public since it's only going to be used for localhost, not a public website that someone might want to impersonate.
+
+
+https://github.com/webisora/vscode-liveserver-https
+    https://www.akadia.com/services/ssh_test_certificate.html
+
+
+> "C:\Program Files\Git\mingw64\bin\openssl.exe" genrsa -des3 -out server.key 1024
+
+password: abc123
+
+
+> "C:\Program Files\Git\mingw64\bin\openssl.exe" req -new -key server.key -out server.csr
+
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:New Jersey
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Glow Bike
+Organizational Unit Name (eg, section) []:Glow Bike
+Common Name (e.g. server FQDN or YOUR name) []:glow.bike
+-----
+
+
+> copy server.key server.key.org
+> "C:\Program Files\Git\mingw64\bin\openssl.exe" rsa -in server.key.org -out server.key
+
+
+> "C:\Program Files\Git\mingw64\bin\openssl.exe" x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+
+Signature ok
+subject=C = US, ST = New Jersey, O = Glow Bike, OU = Glow Bike, CN = glow.bike
+Getting Private key
+
+
+
+
+Then I configured up the VSCode extension for live server, worked
+
+
+
