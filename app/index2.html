@@ -54,11 +54,6 @@ glowBike = new BleGlowBike();
 
 
 
-
-
-
-
-
 <style>
 
 .tinypopup {
@@ -70,8 +65,8 @@ glowBike = new BleGlowBike();
     background-color: black;
     border: 1px solid grey;
 
-    height: 249px;
-    width: 249px;
+    height: 25px;
+    width:  25px;
 
     position: absolute;
     top: 0px;
@@ -83,6 +78,8 @@ glowBike = new BleGlowBike();
     flex-direction: column;
     justify-content: space-evenly;
     align-items: center;
+
+    visibility: hidden;
 }
 
 .menuBar {
@@ -104,29 +101,48 @@ glowBike = new BleGlowBike();
 
 let MENU_HEIGHT;
 
+let domMenu = document.getElementById('menu');
+let currentScreen = "";
+
+function SwitchTo(screen)
+{
+    domMenu.style.visibility = "visible";
+
+    if (screen == currentScreen) return;
+
+    let domConfigurationScreen = document.getElementById("GlowBikeConfigurationScreen");
+    let domControlScreen       = document.getElementById("GlowBikeControlScreen");
+
+    if (screen == "Configuration")
+    {
+        StopGlowBikeControlScreen();
+        StartGlowBikeConfigurationScreen();
+
+        domControlScreen.style.zIndex       = 0;
+        domConfigurationScreen.style.zIndex = 1;
+        domConfigurationScreen.style.visibility = "visible";
+
+        currentScreen = "Configuration";
+    }
+    else    // Control
+    {
+        StopGlowBikeConfigurationScreen();
+        StartGlowBikeControlScreen();
+
+        domConfigurationScreen.style.zIndex = 0;
+        domControlScreen.style.zIndex       = 1;
+        domControlScreen.style.visibility = "visible";
+        domModal.style.visibility = "visible";
+
+        currentScreen = "Control";
+    }
+}
+
 function SetupMenu()
 {
     // Set up the menu to be the right size
-    let domMenu = document.getElementById('menu');
     menu.style.height = `${MENU_HEIGHT}px`;
     menu.style.width  = `${MENU_HEIGHT}px`;
-
-    function SwitchTo(screen)
-    {
-        let domConfigurationScreen = document.getElementById("GlowBikeConfigurationScreen");
-        let domControlScreen       = document.getElementById("GlowBikeControlScreen");
-
-        if (screen == "Configuration")
-        {
-            domControlScreen.style.zIndex       = 0;
-            domConfigurationScreen.style.zIndex = 1;
-        }
-        else    // Control
-        {
-            domControlScreen.style.zIndex       = 1;
-            domConfigurationScreen.style.zIndex = 0;
-        }
-    }
 
     let tinyPopupMenu = new TinyPopupMenu({
         autoclose: true,
@@ -188,21 +204,41 @@ function SetupMenu()
     width: 100%;
     height: 100%;
 
-    background-color: purple;
+    background-color: white;
     color: black;
+
+    visibility: hidden;
 }
+
+
+
 </style>
 
 <div id="GlowBikeConfigurationScreen">
-    Configuration Screen
+    <div id="menuspacer"> </div>
+    words
 </div>
 
 <script>
 'strict';
 
+let domMenuspacer = document.getElementById("menuspacer");
+
 function SetupGlowBikeConfigurationScreen()
 {
 
+}
+
+function StartGlowBikeConfigurationScreen()
+{
+    console.log(`Starting Configuration Screen`);
+
+    domMenuspacer.style.height = MENU_HEIGHT;
+}
+
+function StopGlowBikeConfigurationScreen()
+{
+    console.log(`Stopping Configuration Screen`);
 }
 </script>
 
@@ -241,6 +277,8 @@ function SetupGlowBikeConfigurationScreen()
         height: 100%;
     
         background-color: black;
+
+        visibility: hidden;
     }
     
     input[type=checkbox] {
@@ -329,6 +367,8 @@ function SetupGlowBikeConfigurationScreen()
         width: 50%;
 
         border: 1px solid black;
+
+        visibility: hidden;
     }
     #GlowBikeControlScreenModal::backdrop {
         background-color: black;
@@ -337,15 +377,16 @@ function SetupGlowBikeConfigurationScreen()
 
 </style>
     
-    <dialog id="GlowBikeControlScreenModal">
-        <span></span>
-        <br/>
-        <br/>
-        <button onclick="this.parentNode.close()">OK</button>
-    </dialog>
 
+<dialog id="GlowBikeControlScreenModal">
+    <span></span>
+    <br/>
+    <br/>
+    <button onclick="this.parentNode.close()">OK</button>
+</dialog>
 
-    <div id="GlowBikeControlScreen" class="flex-vertical gap-between">
+<div id="GlowBikeControlScreen" class="flex-vertical gap-between">
+
         <div class="inputRow gap-between">
             <input type='checkbox' class="placeholder">
             <div class="flex-vertical maximize">
@@ -396,6 +437,9 @@ function SetupGlowBikeConfigurationScreen()
 
 let colorWheel;
 
+domModal     = document.getElementById("GlowBikeControlScreenModal");
+domModalText = this.domModal.childNodes[1];
+
 let domCheckRed   = document.getElementById('rCheck');
 let domCheckGreen = document.getElementById('gCheck');
 let domCheckBlue  = document.getElementById('bCheck');
@@ -419,8 +463,6 @@ class ConnectButton
 {
     constructor()
     {
-        this.domModal     = document.getElementById("GlowBikeControlScreenModal");
-        this.domModalText = this.domModal.childNodes[1];
         this.isCanceled = false;
         this.isReconnect = false;
 
@@ -515,8 +557,8 @@ class ConnectButton
                 domConnect.style = "";
 
                 console.log(`GlowBike wasn't Leader`);
-                this.domModalText.innerHTML = `The selected device, ${glowBike.GetName()}, is not a Glow Bike Leader.<br/><br/>Please select the Glow Bike Leader device you wish to control.`;
-                this.domModal.showModal();
+                domModalText.innerHTML = `The selected device, ${glowBike.GetName()}, is not a Glow Bike Leader.<br/><br/>Please select the Glow Bike Leader device you wish to control.`;
+                domModal.showModal();
 
                 // notice the careful sequence here, state change first, then disconnect.
                 // the disconnect will fire a callback, and we simply ignore going from
@@ -537,8 +579,8 @@ class ConnectButton
             {
                 console.log(`Connect Failed`);
     
-                this.domModalText.innerHTML = `Could not connect to selected device ${glowBike.GetName()}.<br/><br/>Please try again or select another device.`;
-                this.domModal.showModal();
+                domModalText.innerHTML = `Could not connect to selected device ${glowBike.GetName()}.<br/><br/>Please try again or select another device.`;
+                domModal.showModal();
             }
 
             this.state = stateNew;
@@ -854,50 +896,40 @@ function SetupGlowBikeControlScreen()
     SetupHeights();
     SetupButtons();
 }
-</script>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<style>
-#JankHider {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-
-    width: 100%;
-    height: 100%;
-
-    background-color: black;
-}
-</style>
-
-<div id="JankHider">
-</div>
-
-<script>
-function SetupJankHider()
+function StartGlowBikeControlScreen()
 {
-    let jankHider = document.getElementById("JankHider");
-    jankHider.parentNode.removeChild(jankHider);
+    console.log(`Starting Control Screen`);
+}
+
+function StopGlowBikeControlScreen()
+{
+    console.log(`Stopping Control Screen`);
+
+    if (domConnect.value != "Connect")
+    {
+        console.log(`  Calling Disconnect/Cancel`);
+        domConnect.click();
+    }
 }
 </script>
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -922,7 +954,8 @@ window.addEventListener('DOMContentLoaded', e => {
     SetupGlowBikeConfigurationScreen();
     SetupGlowBikeControlScreen();
     SetupMenu();
-    SetupJankHider();
+
+    SwitchTo("Control");
 });
 </script>
 
