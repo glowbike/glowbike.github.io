@@ -312,7 +312,7 @@ function SetupGlowBikeConfigurationScreen()
     #rRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 1.0); }
     #rRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 1.0); }
     
-    #gRange                       { background-color:              rgba(  0, 255,   0, 0.3); }
+    #gRange                       { background-color:              rgba(  0, 255,   0, 0.2); }
     #gRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 1.0); }
     #gRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 1.0); }
     
@@ -380,7 +380,7 @@ function SetupGlowBikeConfigurationScreen()
         
         <div class="inputRow gap-between">
             <input type='button' id='connectToggle' value='Connect'>
-            <input type='button' id='bStartPause' value='Start/Pause'>
+            <input type='button' id='bStartPause' value='Start'>
             <input type='button' id='bStop' value='Stop'>
         </div>
     </div>
@@ -412,7 +412,7 @@ let domStop       = document.getElementById('bStop');
 
 
 /////////////////////////////////////////////////////////////////////
-// BLE
+// Button Control
 /////////////////////////////////////////////////////////////////////
 
 class ConnectButton
@@ -422,6 +422,7 @@ class ConnectButton
         this.domModal     = document.getElementById("GlowBikeControlScreenModal");
         this.domModalText = this.domModal.childNodes[1];
         this.isCanceled = false;
+        this.isReconnect = false;
 
         this.state = "unconnected";
 
@@ -435,6 +436,7 @@ class ConnectButton
         if (this.state == "unconnected")
         {
             this.isCanceled = false;
+            this.isReconnect = false;
             this.ChangeState("connecting");
         }
         else
@@ -482,12 +484,28 @@ class ConnectButton
                 glowBikeController = glowBike.GetControlService();
 
                 // Trigger applying UI settings on connect
-                setTimeout(() => {
-                    OnSliderBrightnessChange();
-                    OnSliderRedChange();
-                    OnSliderGreenChange();
-                    OnSliderBlueChange();
-                }, 50);
+                if (this.isReconnect == false)
+                {
+                    setTimeout(() => {
+                        OnSliderBrightnessChange();
+                        OnCheckRedChange();
+                        OnCheckGreenChange();
+                        OnCheckBlueChange();
+
+                        // auto-start on first connect
+                        domStartPause.value = "Pause";
+                        TransmitStart();
+                    }, 50);
+                }
+                else
+                {
+                    setTimeout(() => {
+                        OnSliderBrightnessChange();
+                        OnCheckRedChange();
+                        OnCheckGreenChange();
+                        OnCheckBlueChange();
+                    }, 50);
+                }
 
                 this.state = stateNew;
             }
@@ -531,6 +549,7 @@ class ConnectButton
             domConnect.style = "background-color: yellow; border: yellow;";
             
             console.log(`Connection Lost, auto-re-connection`);
+            this.isReconnect = true;
 
             glowBikeController = null;
 
@@ -541,7 +560,7 @@ class ConnectButton
 
 let connectButton;
 
-async function SetupBle()
+async function SetupButtons()
 {
     if (connectButton == null)
     {
@@ -550,6 +569,25 @@ async function SetupBle()
 
     domConnect.addEventListener('click', e => {
         connectButton.OnClick();
+    });
+
+    domStartPause.addEventListener('click', e => {
+        if (domStartPause.value == "Start")
+        {
+            TransmitStart();
+            domStartPause.value = "Pause";
+        }
+        else
+        {
+            TransmitPause();
+            domStartPause.value = "Start";
+        }
+    });
+
+    domStop.addEventListener('click', e => {
+        TransmitStop();
+
+        domStartPause.value = "Start";
     });
 }
 
@@ -583,6 +621,7 @@ async function Send(cmd)
             
             try
             {
+                console.log(`sending ${objJsonSend}`);
                 await glowBikeController.Send(objJsonSend);
             }
             catch (e)
@@ -635,6 +674,21 @@ function TransmitBlueAutomatic()
     Send("glow.mbo");
 }
 
+function TransmitStart()
+{
+    Send("glow.start");
+}
+
+function TransmitPause()
+{
+    Send("glow.pause");
+}
+
+function TransmitStop()
+{
+    Send("glow.stop");
+}
+
 
 /////////////////////////////////////////////////////////////////////
 // Color Input Handling
@@ -652,9 +706,6 @@ function OnWheelChange(r, g, b)
 
     TransmitRGB();
 }
-
-
-
 
 function OnSliderBrightnessChange()
 {
@@ -801,7 +852,7 @@ function SetupGlowBikeControlScreen()
     SetupRanges();
     SetupChecks();
     SetupHeights();
-    SetupBle();
+    SetupButtons();
 }
 </script>
 
