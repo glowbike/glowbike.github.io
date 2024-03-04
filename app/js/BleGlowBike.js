@@ -312,7 +312,7 @@ export class BleGlowBike
                     this.configurationService_ = new GlowBikeConfigurationService(ctc);
                 }
                 else if (svc.GetUuid() == GlowBikeControlService.SERVICE_UUID &&
-                ctc.GetUuid() == CTC_SERIAL_UUID)
+                         ctc.GetUuid() == CTC_SERIAL_UUID)
                 {
                     console.log(`Control Service match`);
                     this.controlService_ = new GlowBikeControlService(ctc);
