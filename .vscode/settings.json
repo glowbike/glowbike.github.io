@@ -7,5 +7,8 @@
         "cert"      : "c:/users/dougl/git/glowbike.github.io/localhost/server.crt",
         "key"       : "c:/users/dougl/git/glowbike.github.io/localhost/server.key",
         "passphrase": "abc123"
-    }
+    },
+    "liveServer.settings.ignoreFiles": [
+        "**/**",
+    ]
 }
