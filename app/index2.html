@@ -45,7 +45,6 @@ let glowBikeController = null;
     
 <script type="module">
 import { BleGlowBike } from "./js/BleGlowBike.js"
-
 glowBike = new BleGlowBike();
 </script>
     
@@ -393,7 +392,6 @@ let domStop       = document.getElementById('bStop');
 // BLE
 /////////////////////////////////////////////////////////////////////
 
-
 async function OnConnectClick()
 {
     if (domConnect.value == "Connect")
@@ -412,21 +410,25 @@ async function OnConnectClick()
                 console.log(`Connected: ${glowBike.GetName()}`);
     
                 domConnect.style = "background-color: green; border: green;";
-                domConnect.value = "Break";
+                domConnect.value = "Disconnect";
     
                 glowBike.SetOnDisconnectedCallback(() => {
-                    OnDisconnect(domConnect);
+                    domConnect.style = "background-color: red; border: red;";
+                    glowBikeController = null;
                 });
     
                 // Trigger applying UI settings on connect
-                OnSliderBrightnessChange();
-                OnSliderRedChange();
-                OnSliderGreenChange();
-                OnSliderBlueChange();
+                setTimeout(() => {
+                    OnSliderBrightnessChange();
+                    OnSliderRedChange();
+                    OnSliderGreenChange();
+                    OnSliderBlueChange();
+                }, 50);
             }
             else
             {
                 glowBike.Disconnect();
+                glowBikeController = null;
 
                 console.log(`GlowBike wasn't Leader`);
 
@@ -461,43 +463,81 @@ async function SetupBle()
 // Message sending
 /////////////////////////////////////////////////////////////////////
 
+let queue = [];
+
+let count = 0;
+
+async function Send(cmd)
+{
+    if (glowBikeController == null) return;
+
+    let obj = {
+        type: "SHELL_COMMAND",
+        cmd: cmd,
+    };
+
+    let objJson = JSON.stringify(obj)
+
+    queue.push(objJson);
+
+    if (queue.length == 1)
+    {
+        while (queue.length)
+        {
+            let objJsonSend = queue[0];
+            
+            try
+            {
+                await glowBikeController.Send(objJsonSend);
+            }
+            catch (e)
+            {
+                console.log(`Send issue: ${e}`);
+            }
+
+            queue.shift();
+        }
+    }
+}
+
 function TransmitRGB()
 {
-    console.log(`glow.rgb ${domSliderRed.value} ${domSliderGreen.value} ${domSliderBlue.value}`);
+    Send(`glow.rgb ${domSliderRed.value} ${domSliderGreen.value} ${domSliderBlue.value}`);
 }
 
 function TransmitPct(pct)
 {
-    console.log(`glow.pct ${pct}`);
+    Send(`glow.pct ${pct}`);
 }
 
 function TransmitRed()
 {
-    console.log(`glow.mrl ${domSliderRed.value}`);
+    Send(`glow.mrl ${domSliderRed.value}`);
 }
 
 function TransmitGreen()
 {
-    console.log(`glow.mgl ${domSliderGreen.value}`);
+    Send(`glow.mgl ${domSliderGreen.value}`);
 }
+
 function TransmitBlue()
 {
-    console.log(`glow.mbl ${domSliderBlue.value}`);
+    Send(`glow.mbl ${domSliderBlue.value}`);
 }
 
 function TransmitRedAutomatic()
 {
-    console.log("glow.mro");
+    Send("glow.mro");
 }
 
 function TransmitGreenAutomatic()
 {
-    console.log("glow.mgo");
+    Send("glow.mgo");
 }
 
 function TransmitBlueAutomatic()
 {
-    console.log("glow.mbo");
+    Send("glow.mbo");
 }
 
 

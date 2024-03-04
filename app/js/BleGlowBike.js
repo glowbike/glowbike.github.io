@@ -117,7 +117,11 @@ export class BleGlowBike
     {
         this.Disconnect();
 
-        this.dev_ = await this.ble_.GetDevice(GlowBikeConfigurationService.SERVICE_UUID);
+        this.dev_ =
+            await this.ble_.GetDevice(
+                GlowBikeConfigurationService.SERVICE_UUID,
+                GlowBikeControlService.SERVICE_UUID,
+            );
 
         return await this.ConnectToDevice();
     }

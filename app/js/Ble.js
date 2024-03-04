@@ -79,7 +79,7 @@ export class Ble
 
     // only supports filtering by 16-bit UUIDs for now
     // filterUuid is a string in the form of "0x1234" or "1234"
-    async GetDevice(filterUuid)
+    async GetDevice(filterUuid, optionalUuid)
     {
         let retVal = null;
 
@@ -91,11 +91,25 @@ export class Ble
             {
                 let filterUuidInt = parseInt(filterUuid, 16);
 
-                filter = {
-                    filters: [
-                        { services: [filterUuidInt] },
-                    ],
-                };
+                if (optionalUuid == undefined)
+                {
+                    filter = {
+                        filters: [
+                            { services: [filterUuidInt] },
+                        ],
+                    };
+                }
+                else
+                {
+                    let filterOptionalUuidInt = parseInt(optionalUuid, 16);
+
+                    filter = {
+                        filters: [
+                            { services: [filterUuidInt] },
+                        ],
+                        optionalServices: [filterOptionalUuidInt],
+                    };
+                }
             }
             else
             {
