@@ -38,6 +38,18 @@ html, body {
 
 
 
+<script>
+let glowBike           = null;
+let glowBikeController = null;
+</script>
+    
+<script type="module">
+import { BleGlowBike } from "./js/BleGlowBike.js"
+
+glowBike = new BleGlowBike();
+</script>
+    
+
 
 
 
@@ -149,6 +161,7 @@ function SetupMenu()
 
     tinyPopupMenu.addToggler(document.getElementById('menu'), {}, 'click');
 }
+
 </script>
 
 
@@ -371,8 +384,77 @@ let domSliderRed   = document.getElementById('rRange');
 let domSliderGreen = document.getElementById('gRange');
 let domSliderBlue  = document.getElementById('bRange');
 
+let domConnect    = document.getElementById('connectToggle');
+let domStartPause = document.getElementById('bStartPause');
+let domStop       = document.getElementById('bStop');
 
 
+/////////////////////////////////////////////////////////////////////
+// BLE
+/////////////////////////////////////////////////////////////////////
+
+
+async function OnConnectClick()
+{
+    if (domConnect.value == "Connect")
+    {
+        domConnect.style = "background-color: yellow; border: yellow;";
+
+        let ok = await glowBike.Connect();
+
+        if (ok)
+        {
+            console.log(`Role: ${glowBike.GetRole()}`);
+
+            if (glowBike.GetRole() == "Leader")
+            {
+                glowBikeController = glowBike.GetControlService();
+                console.log(`Connected: ${glowBike.GetName()}`);
+    
+                domConnect.style = "background-color: green; border: green;";
+                domConnect.value = "Break";
+    
+                glowBike.SetOnDisconnectedCallback(() => {
+                    OnDisconnect(domConnect);
+                });
+    
+                // Trigger applying UI settings on connect
+                OnSliderBrightnessChange();
+                OnSliderRedChange();
+                OnSliderGreenChange();
+                OnSliderBlueChange();
+            }
+            else
+            {
+                glowBike.Disconnect();
+
+                console.log(`GlowBike wasn't Leader`);
+
+                domConnect.style = "background-color: red; border: red;";
+            }
+        }
+        else
+        {
+            console.log(`Connect Failed`);
+
+            domConnect.style = "background-color: red; border: red;";
+        }
+    }
+    else
+    {
+        glowBike.Disconnect();
+
+        domConnect.style = "";
+        domConnect.value = "Connect";
+    }
+}
+
+async function SetupBle()
+{
+    domConnect.addEventListener('click', e => {
+        OnConnectClick();
+    });
+}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -584,6 +666,7 @@ function SetupGlowBikeControlScreen()
     SetupRanges();
     SetupChecks();
     SetupHeights();
+    SetupBle();
 }
 </script>
 
@@ -648,6 +731,7 @@ function SetupJankHider()
 
 <script>
 'strict';
+
 window.addEventListener('DOMContentLoaded', e => {
     SetupGlowBikeConfigurationScreen();
     SetupGlowBikeControlScreen();
@@ -655,6 +739,9 @@ window.addEventListener('DOMContentLoaded', e => {
     SetupJankHider();
 });
 </script>
+
+
+
     
 
 </body>
