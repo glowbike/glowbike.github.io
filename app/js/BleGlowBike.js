@@ -96,21 +96,28 @@ export class BleGlowBike
 
         this.wantToBeConnected_ = false;
         this.reconnecting_ = false;
+        this.disconnectCalled_ = false;
 
+        this.fnOnConnected_    = () => {};
+        this.fnOnConnectFail_  = () => {};
         this.fnOnDisconnected_ = () => {};
-        this.fnOnReconnected_ = () => {};
 
         this.ResetDiscoveredServicesState();
+    }
+
+    SetOnConnectedCallback(fn)
+    {
+        this.fnOnConnected_ = fn;
+    }
+
+    SetOnConnectFailCallback(fn)
+    {
+        this.fnOnConnectFail_ = fn;
     }
 
     SetOnDisconnectedCallback(fn)
     {
         this.fnOnDisconnected_ = fn;
-    }
-
-    SetOnReconnectedCallback(fn)
-    {
-        this.fnOnReconnected_ = fn;
     }
 
     async Connect()
@@ -123,7 +130,18 @@ export class BleGlowBike
                 GlowBikeControlService.SERVICE_UUID,
             );
 
-        return await this.ConnectToDevice();
+        let ok = await this.ConnectToDevice();
+
+        if (ok)
+        {
+            this.fnOnConnected_();
+        }
+        else
+        {
+            this.fnOnConnectFail_();
+        }
+
+        return ok;
     }
 
     async ConnectToDevice()
@@ -206,7 +224,7 @@ export class BleGlowBike
                 console.log(`connected again`);
 
                 // emit event
-                this.fnOnReconnected_();
+                this.fnOnConnected_();
             }
             else
             {
@@ -225,6 +243,8 @@ export class BleGlowBike
 
         if (this.dev_)
         {
+            this.disconnectCalled_ = false;
+
             if (await this.dev_.Connect())
             {
                 // possible we get disconnected while async waiting to
@@ -234,18 +254,34 @@ export class BleGlowBike
                     gotDisconnected = true;
                 });
 
-                retVal = await this.FindServices();
-
-                console.log(`find services retval: ${retVal}`);
-
-                if (gotDisconnected)
+                if (this.disconnectCalled_ == false &&
+                    (this.reconnecting_ == false ||
+                        (this.reconnecting_ && this.wantToBeConnected_)))
                 {
-                    console.log("got disconnected while trying to scan services");
-                    reason = "GotDisconnected";
+                    retVal = await this.FindServices();
+
+                    console.log(`find services retval: ${retVal}`);
+
+                    if (gotDisconnected)
+                    {
+                        console.log("got disconnected while trying to scan services");
+                        reason = "GotDisconnected";
+                    }
+                    else if (retVal == false)
+                    {
+                        reason = "NotGlowBike";
+                    }
                 }
-                else if (retVal == false)
+                else
                 {
-                    reason = "NotGlowBike";
+                    // connect attempt canceled
+                    console.log("Attempted connection canceled");
+
+                    await this.dev_.Disconnect();
+
+                    retVal = false;
+
+                    reason = "FailedOrAborted";
                 }
             }
             else
@@ -269,6 +305,7 @@ export class BleGlowBike
     async Disconnect()
     {
         this.wantToBeConnected_ = false;
+        this.disconnectCalled_ = true;
 
         if (this.reconnecting_)
         {

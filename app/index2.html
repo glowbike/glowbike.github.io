@@ -320,8 +320,31 @@ function SetupGlowBikeConfigurationScreen()
     #bRange::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
     #bRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
     
+
+    #GlowBikeControlScreenModal {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        width: 50%;
+
+        border: 1px solid black;
+    }
+    #GlowBikeControlScreenModal::backdrop {
+        background-color: black;
+        opacity: 0.7;
+    }
+
 </style>
     
+    <dialog id="GlowBikeControlScreenModal">
+        <span></span>
+        <br/>
+        <br/>
+        <button onclick="this.parentNode.close()">OK</button>
+    </dialog>
+
+
     <div id="GlowBikeControlScreen" class="flex-vertical gap-between">
         <div class="inputRow gap-between">
             <input type='checkbox' class="placeholder">
@@ -329,11 +352,7 @@ function SetupGlowBikeConfigurationScreen()
                 <input type='range' min='0' max='100' value='30' id='pctRange'>
             </div>
         </div>
-    
-        <div id="colorwheel-container">
-            <div id='colorwheel'></div>
-        </div>
-    
+
         <div class="inputRow gap-between">
             <input type='checkbox' id='rCheck' checked>
             <div class="flex-vertical maximize">
@@ -354,7 +373,11 @@ function SetupGlowBikeConfigurationScreen()
                 <input type='range' min='0' max='255' id='bRange'>
             </div>
         </div>
-    
+
+        <div id="colorwheel-container">
+            <div id='colorwheel'></div>
+        </div>
+        
         <div class="inputRow gap-between">
             <input type='button' id='connectToggle' value='Connect'>
             <input type='button' id='bStartPause' value='Start/Pause'>
@@ -392,31 +415,72 @@ let domStop       = document.getElementById('bStop');
 // BLE
 /////////////////////////////////////////////////////////////////////
 
-async function OnConnectClick()
+class ConnectButton
 {
-    if (domConnect.value == "Connect")
+    constructor()
     {
-        domConnect.style = "background-color: yellow; border: yellow;";
+        this.domModal     = document.getElementById("GlowBikeControlScreenModal");
+        this.domModalText = this.domModal.childNodes[1];
+        this.isCanceled = false;
 
-        let ok = await glowBike.Connect();
+        this.state = "unconnected";
 
-        if (ok)
+        glowBike.SetOnConnectedCallback(()    => { this.ChangeState("connected");   });
+        glowBike.SetOnConnectFailCallback(()  => { this.ChangeState("unconnected"); });
+        glowBike.SetOnDisconnectedCallback(() => { this.ChangeState("unconnected"); });
+    }
+
+    OnClick()
+    {
+        if (this.state == "unconnected")
         {
-            console.log(`Role: ${glowBike.GetRole()}`);
+            this.isCanceled = false;
+            this.ChangeState("connecting");
+        }
+        else
+        {
+            // user is:
+            // - disconnecting an established connection
+            // - cancelling an attempted connection
+            // - cancelling a re-connection (looks the same as above)
 
+            // in all cases, we will call disconnect and transition to the
+            // unconnected state.
+            // a callback to being disconnected later will be
+            // for unconeccted -> unconnected
+            this.isCanceled = true;
+
+            glowBike.Disconnect();
+
+            domConnect.value = "Connect";
+            domConnect.style = "";
+
+            this.state = "unconnected";
+        }
+    }
+
+    async ChangeState(stateNew)
+    {
+        if (this.state == "unconnected" && stateNew == "connecting")
+        {
+            domConnect.value = "Connecting";
+            domConnect.style = "background-color: yellow; border: yellow;";
+
+            glowBike.Connect();
+
+            this.state = stateNew;
+        }
+        else if (this.state == "connecting" && stateNew == "connected")
+        {
             if (glowBike.GetRole() == "Leader")
             {
-                glowBikeController = glowBike.GetControlService();
-                console.log(`Connected: ${glowBike.GetName()}`);
-    
-                domConnect.style = "background-color: green; border: green;";
                 domConnect.value = "Disconnect";
-    
-                glowBike.SetOnDisconnectedCallback(() => {
-                    domConnect.style = "background-color: red; border: red;";
-                    glowBikeController = null;
-                });
-    
+                domConnect.style = "background-color: green; border: green;";
+
+                console.log(`Connected: ${glowBike.GetName()}`);
+
+                glowBikeController = glowBike.GetControlService();
+
                 // Trigger applying UI settings on connect
                 setTimeout(() => {
                     OnSliderBrightnessChange();
@@ -424,37 +488,68 @@ async function OnConnectClick()
                     OnSliderGreenChange();
                     OnSliderBlueChange();
                 }, 50);
+
+                this.state = stateNew;
             }
             else
             {
-                glowBike.Disconnect();
-                glowBikeController = null;
+                domConnect.value = "Connect";
+                domConnect.style = "";
 
                 console.log(`GlowBike wasn't Leader`);
+                this.domModalText.innerHTML = `The selected device, ${glowBike.GetName()}, is not a Glow Bike Leader.<br/><br/>Please select the Glow Bike Leader device you wish to control.`;
+                this.domModal.showModal();
 
-                domConnect.style = "background-color: red; border: red;";
+                // notice the careful sequence here, state change first, then disconnect.
+                // the disconnect will fire a callback, and we simply ignore going from
+                // unconnected -> unconnected.
+                this.state = "unconnected";
+                
+                glowBike.Disconnect();
             }
         }
-        else
+        else if (this.state == "connecting" && stateNew == "unconnected")
         {
-            console.log(`Connect Failed`);
+            domConnect.value = "Connect";
+            domConnect.style = "";
 
-            domConnect.style = "background-color: red; border: red;";
+            // only warn if a device was actually selected
+            // (as opposed to just not picking one at all)
+            if (this.isCanceled == false && glowBike.GetName() != "")
+            {
+                console.log(`Connect Failed`);
+    
+                this.domModalText.innerHTML = `Could not connect to selected device ${glowBike.GetName()}.<br/><br/>Please try again or select another device.`;
+                this.domModal.showModal();
+            }
+
+            this.state = stateNew;
         }
-    }
-    else
-    {
-        glowBike.Disconnect();
+        else if (this.state == "connected" && stateNew == "unconnected")
+        {
+            domConnect.value = "Connecting";
+            domConnect.style = "background-color: yellow; border: yellow;";
+            
+            console.log(`Connection Lost, auto-re-connection`);
 
-        domConnect.style = "";
-        domConnect.value = "Connect";
+            glowBikeController = null;
+
+            this.state = "connecting";
+        }
     }
 }
 
+let connectButton;
+
 async function SetupBle()
 {
+    if (connectButton == null)
+    {
+        connectButton = new ConnectButton();
+    }
+
     domConnect.addEventListener('click', e => {
-        OnConnectClick();
+        connectButton.OnClick();
     });
 }
 
