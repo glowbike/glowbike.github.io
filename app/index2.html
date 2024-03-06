@@ -587,7 +587,9 @@ function SetupGlowBikeConfigurationScreen()
         else
         {
             glowBike.Disconnect();
+            domCfgStatus.innerHTML = "Not yet connected";
             domCfgSelect.innerHTML = "Select";
+            domCfgFollowContainer.style.visibility = "hidden";
             domCfgContainer.style.visibility = "hidden";
         }
     });
