@@ -153,17 +153,16 @@ function SetupMenu()
         arrow: false,
         menuItems: [
             {
-                content: 'Configuration Screen',
+                content: 'Lead/Follow Configuration',
                 callback: () => {
                     SwitchTo("Configuration");
                 },
             },
             {
-                content: 'Color Control Screen',
+                content: 'Color Control',
                 callback: () => {
                     SwitchTo("Control");
                 },
-                className: 'disabled',
             },
             '-',
             {
@@ -533,24 +532,8 @@ async function OnSelectForConfiguration()
         glowBikeConfiguration = glowBike.GetConfigurationService();
 
         // handle events from service
-        glowBikeConfiguration.SetOnReceiveCallback(str => {
-            let jsonObj = {};
-            let process = true;
-
-            try
-            {
-                jsonObj = JSON.parse(str);
-            }
-            catch (e)
-            {
-                process = false;
-                console.log(`Could not parse json from str "${str}": ${e}`);
-            }
-
-            if (process)
-            {
-                OnReceive(jsonObj);
-            }
+        glowBikeConfiguration.SetOnReceiveCallback(jsonObj => {
+            OnReceive(jsonObj);
         });
         
         // request current configuration
@@ -731,12 +714,28 @@ function StopGlowBikeConfigurationScreen()
     #bRange::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
     
 
+
+    /* period sliders */
+    #redVal                       { background-color:              rgba(255,   0,   0, 0.3); }
+    #redVal::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 1.0); }
+    #redVal::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(255,   0,   0, 1.0); }
+    
+    #greenVal                       { background-color:              rgba(  0, 255,   0, 0.2); }
+    #greenVal::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 1.0); }
+    #greenVal::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0, 255,   0, 1.0); }
+
+    #blueVal                       { background-color:              rgba(  0,   0, 255, 0.3); }
+    #blueVal::-webkit-slider-thumb { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
+    #blueVal::-moz-range-thumb     { box-shadow: -100rem 0 0 100rem rgba(  0,   0, 255, 1.0); }
+
+
+
     #GlowBikeControlScreenModal {
         display: flex;
         flex-direction: column;
         justify-content: space-between;
 
-        width: 50%;
+        width: 80%;
 
         border: 1px solid black;
 
@@ -826,6 +825,38 @@ let domConnect    = document.getElementById('connectToggle');
 let domStartPause = document.getElementById('bStartPause');
 let domStop       = document.getElementById('bStop');
 
+let periodRedMs;
+let periodBlueMs;
+let periodGreenMs;
+
+
+/////////////////////////////////////////////////////////////////////
+// Color Configuration
+/////////////////////////////////////////////////////////////////////
+
+function ResetPeriodToDefault()
+{
+    periodRedMs   = 10000;
+    periodBlueMs  =  5000;
+    periodGreenMs =  8000;
+}
+
+ResetPeriodToDefault();
+
+function OnColorReceive(jsonObj)
+{
+    console.log(`OnColorReceive: ${JSON.stringify(jsonObj)}`);
+
+    type = jsonObj["type"];
+
+    if (type == "REP_GET_COLOR_CONFIGURATION")
+    {
+        periodRedMs   = jsonObj["periodRedMs"];
+        periodGreenMs = jsonObj["periodGreenMs"];
+        periodBlueMs  = jsonObj["periodBlueMs"];
+    }
+}
+
 
 /////////////////////////////////////////////////////////////////////
 // Modal Control
@@ -913,6 +944,11 @@ class ConnectButton
                 console.log(`Connected: ${glowBike.GetName()}`);
 
                 glowBikeController = glowBike.GetControlService();
+                glowBikeConfiguration = glowBike.GetConfigurationService();
+
+                glowBikeConfiguration.SetOnReceiveCallback(jsonObj => {
+                    OnColorReceive(jsonObj);
+                });
 
                 // Trigger applying UI settings on connect
                 if (this.isReconnect == false)
@@ -937,6 +973,10 @@ class ConnectButton
                         OnCheckBlueChange();
                     }, 50);
                 }
+
+                setTimeout(() => {
+                    TransmitGetColorConfig();
+                }, 50)
 
                 this.state = stateNew;
             }
@@ -1118,6 +1158,22 @@ function TransmitStop()
     Send("glow.stop");
 }
 
+function TransmitGetColorConfig()
+{
+    CfgSend({
+        type: "REQ_GET_COLOR_CONFIGURATION",
+    });
+}
+
+function TransmitSetColorConfig()
+{
+    CfgSend({
+        type: "REQ_SET_COLOR_CONFIGURATION",
+        periodRedMs: periodRedMs,
+        periodBlueMs: periodBlueMs,
+        periodGreenMs: periodGreenMs,
+    })
+}
 
 /////////////////////////////////////////////////////////////////////
 // Color Input Handling
@@ -1199,7 +1255,7 @@ function OnCheckBlueChange()
 // Init
 /////////////////////////////////////////////////////////////////////
 
-let RGB_START = [200, 40, 200];
+let RGB_START = [255, 0, 255];
 
 function SetupColorWheel()
 {
@@ -1242,11 +1298,99 @@ function SetupRanges()
     domSliderBlue.value  = RGB_START[2];
 }
 
+
+class CheckOperator
+{
+    constructor(domCheck)
+    {
+        let LONG_PRESS_TIMEOUT_MS = 1000;
+
+        let timerHandle;
+
+        domCheck.addEventListener('pointerdown', e => {
+            console.log("down");
+
+            timerHandle = setTimeout(() => {
+                console.log("long press menu activated");
+
+                ShowModal(
+`
+Change the period of the automatic color cycling:<br/><br/>
+
+
+Red: (<span id='redValDisp'>${(periodRedMs / 1000).toFixed(1)}</span> Seconds Period)<br/>
+<input id='redVal' type='range' min='100' max='30000' step='100' value='${periodRedMs}'
+onInput='
+document.getElementById("redValDisp").innerHTML = (this.value / 1000).toFixed(1);
+periodRedMs = document.getElementById("redVal").value;
+'
+onChange='TransmitSetColorConfig();'
+>
+
+<br/><br/>
+
+Green: (<span id='greenValDisp'>${(periodGreenMs / 1000).toFixed(1)}</span> Seconds Period)<br/>
+<input id='greenVal' type='range' min='100' max='30000' step='100' value='${periodGreenMs}'
+onInput='
+document.getElementById("greenValDisp").innerHTML = (this.value / 1000).toFixed(1);
+periodGreenMs = document.getElementById("greenVal").value;
+'
+onChange='TransmitSetColorConfig();'
+>
+
+<br/><br/>
+
+Blue: (<span id='blueValDisp'>${(periodBlueMs / 1000).toFixed(1)}</span> Seconds Period)<br/>
+<input id='blueVal' type='range' min='100' max='30000' step='100' value='${periodBlueMs}'
+onInput='
+document.getElementById("blueValDisp").innerHTML = (this.value / 1000).toFixed(1);
+periodBlueMs = document.getElementById("blueVal").value;
+'
+onChange='TransmitSetColorConfig();'
+>
+
+<br/>
+<br/>
+<br/>
+
+<button onClick='
+ResetPeriodToDefault();
+TransmitSetColorConfig();
+
+document.getElementById("redVal").value         = periodRedMs;
+document.getElementById("redValDisp").innerHTML = (periodRedMs / 1000).toFixed(1);
+
+document.getElementById("greenVal").value         = periodGreenMs;
+document.getElementById("greenValDisp").innerHTML = (periodGreenMs / 1000).toFixed(1);
+
+document.getElementById("blueVal").value         = periodBlueMs;
+document.getElementById("blueValDisp").innerHTML = (periodBlueMs / 1000).toFixed(1);
+
+'>Reset to defaults</button>
+
+`
+                );
+            }, LONG_PRESS_TIMEOUT_MS)
+        });
+        domCheck.addEventListener('pointerup', e => {
+            console.log("up");
+            clearTimeout(timerHandle);
+        });
+        domCheck.addEventListener('change', e => {
+            console.log("change")
+
+            if (domCheck == domCheckRed)   { OnCheckRedChange();   }
+            if (domCheck == domCheckGreen) { OnCheckGreenChange(); }
+            if (domCheck == domCheckBlue)  { OnCheckBlueChange();  }
+        });
+    }
+}
+
 function SetupChecks()
 {
-    domCheckRed.addEventListener('change',   e => { OnCheckRedChange()   });
-    domCheckGreen.addEventListener('change', e => { OnCheckGreenChange() });
-    domCheckBlue.addEventListener('change',  e => { OnCheckBlueChange()  });
+    new CheckOperator(domCheckRed);
+    new CheckOperator(domCheckGreen);
+    new CheckOperator(domCheckBlue);
 }
 
 function SetupHeights()
