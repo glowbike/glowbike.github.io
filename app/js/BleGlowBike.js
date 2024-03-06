@@ -120,6 +120,30 @@ export class BleGlowBike
         this.fnOnDisconnected_ = fn;
     }
 
+    async ConnectLeader()
+    {
+        this.Disconnect();
+
+        this.dev_ =
+            await this.ble_.GetDevice(
+                GlowBikeControlService.SERVICE_UUID,
+                GlowBikeConfigurationService.SERVICE_UUID,
+            );
+
+        let ok = await this.ConnectToDevice();
+
+        if (ok)
+        {
+            this.fnOnConnected_();
+        }
+        else
+        {
+            this.fnOnConnectFail_();
+        }
+
+        return ok;
+    }
+
     async Connect()
     {
         this.Disconnect();
