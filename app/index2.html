@@ -41,6 +41,7 @@ html, body {
 <script>
 let glowBike           = null;
 let glowBikeController = null;
+let glowBikeConfiguration = null;
 </script>
     
 <script type="module">
@@ -132,7 +133,6 @@ function SwitchTo(screen)
         domConfigurationScreen.style.zIndex = 0;
         domControlScreen.style.zIndex       = 1;
         domControlScreen.style.visibility = "visible";
-        domModal.style.visibility = "visible";
 
         currentScreen = "Control";
     }
@@ -204,41 +204,410 @@ function SetupMenu()
     width: 100%;
     height: 100%;
 
-    background-color: white;
+    display: flex;
+    flex-direction: column;
+
+    background-color: black;
     color: black;
 
     visibility: hidden;
 }
 
+#cfgMain {
+    flex: 1;
 
+    background-color: white;
+
+    border-radius: 0 1rem 1rem 1rem;
+}
+
+#cfgContainer {
+    visibility: hidden;
+}
+
+#cfgFollowContainer {
+    visibility: hidden;
+}
+
+#GlowBikeConfigurationScreenModal {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    width: 50%;
+
+    border: 1px solid black;
+
+    visibility: hidden;
+}
+#GlowBikeConfigurationScreenModal::backdrop {
+    background-color: black;
+    opacity: 0.7;
+}
 
 </style>
 
+
+<dialog id="GlowBikeConfigurationScreenModal">
+    <span></span>
+    <br/>
+    <br/>
+    <button onclick="CloseCfgModal()">OK</button>
+</dialog>
+
 <div id="GlowBikeConfigurationScreen">
-    <div id="menuspacer"> </div>
-    words
+    <div id="menuspacer"></div>
+    <div id="cfgMain">
+        <br/>
+        <button id="cfgSelect">Select</button> Select a GlowBike device to configure.
+        <br/>
+        <br/>
+        <div id="cfgStatus">Not yet connected</div>
+        <br/>
+        <div id="cfgContainer">
+            <input id="cfgName" type="text" size="12" maxlength="15" autocomplete="off">
+            <select name="cfgLocation" id="cfgLocation">
+                <option value="FT">Front Tire (FT)</option>
+                <option value="MF">Middle Frame (MF)</option>
+                <option value="BT">Back Tire (BT)</option>
+            </select>
+            <select name="cfgRole" id="cfgRole" disabled>
+                <option value="Leader">Leader (L)</option>
+                <option value="Follower">Follower (F)</option>
+            </select>
+            <br/>
+            <div id="cfgFollowContainer">
+                Leader:
+                <input id="cfgFollow" type="text" size="12" maxlength="15" autocomplete="off">
+            </div>
+            <br/>
+            <br/>
+            <button id="cfgSave">Save and Disconnect</button>
+        </div>
+    </div>
 </div>
 
 <script>
 'strict';
 
 let domMenuspacer = document.getElementById("menuspacer");
+let domCfgSelect = document.getElementById("cfgSelect");
+let domCfgContainer = document.getElementById("cfgContainer");
+let domCfgStatus = document.getElementById("cfgStatus");
+let domCfgName = document.getElementById("cfgName");
+let domCfgLocation = document.getElementById("cfgLocation");
+let domCfgRole = document.getElementById("cfgRole");
+let domCfgFollowContainer = document.getElementById("cfgFollowContainer");
+let domCfgFollow = document.getElementById("cfgFollow");
+let domCfgSave = document.getElementById("cfgSave");
+let domCfgModal     = document.getElementById("GlowBikeConfigurationScreenModal");
+let domCfgModalText = domCfgModal.childNodes[1];
+
+
+function ShowCfgModal(str)
+{
+    domCfgModalText.innerHTML = str;
+    domCfgModal.showModal();
+    domCfgModal.style.visibility = "visible";
+}
+
+function CloseCfgModal()
+{
+    domCfgModal.close();
+    domCfgModal.style.visibility = "hidden";
+}
+
+
+domCfgSave.addEventListener('click', e => {
+    let name = domCfgName.value.trim();
+    // convert 
+    let                                 location = "FRONT_TIRE";
+    if (domCfgLocation.value == "MF") { location = "MIDDLE_FRAME"; }
+    if (domCfgLocation.value == "BT") { location = "BACK_TIRE";    }
+    let role = domCfgRole.value.trim();
+    let follow = domCfgFollow.value.trim();
+
+    // check you're not trying to follow yourself
+    if (name == "")
+    {
+        ShowCfgModal(`Device name cannot be blank`);
+    }
+    else if (location == "MIDDLE_FRAME" && role == "Follower" && name == follow)
+    {
+        ShowCfgModal(`You cannot follow yourself!<br/><br/>The Middle Frame device is either a Leader to the two tires, or, itself acts as a Follower to a differently-named Middle Frame Leader device.`);
+    }
+    else if (role == "Follower" && follow == "")
+    {
+        ShowCfgModal(`You must have a named Leader device to follow in the Follower role.`);
+    }
+    else
+    {
+        // send
+        CfgSend({
+            type    : "REQ_PUT_CONFIGURATION",
+            name    : name,
+            location: location,
+            role    : role,
+            follow  : follow,
+        });
+    }
+});
+
+// input requirements and auto-filtering
+// - all caps
+// - no punctuation
+// - no spaces (auto underscore)
+
+function InputConverter(dom)
+{
+    dom.addEventListener("input", e => {
+        let valueNew = "";
+
+        for (let c of dom.value)
+        {
+            if (c.match(/[A-Z]|[a-z]|[0-9]/i))
+            {
+                // uppercase it
+                valueNew += c.toUpperCase();
+            }
+            else if (c == "_")
+            {
+                // add
+                valueNew += c;
+            }
+            else if (c == " ")
+            {
+                // replace
+                valueNew += "_";
+            }
+        }
+
+        dom.value = valueNew;
+    });
+}
+
+InputConverter(domCfgName);
+InputConverter(domCfgFollow);
+
+
+domCfgLocation.addEventListener('change', e => {
+    console.log(`location change, now ${domCfgLocation.value}`)
+
+    if (domCfgLocation.value == "MF")
+    {
+        domCfgRole.disabled = false;
+    }
+    else
+    {
+        domCfgRole.disabled = true;
+        domCfgRole.value = "Follower";
+        domCfgFollowContainer.style.visibility = "visible";
+    }
+});
+
+domCfgRole.addEventListener('change', e => {
+    console.log(`role change, now ${domCfgRole.value}`)
+
+    if (domCfgRole.value == "Follower")
+    {
+        domCfgFollowContainer.style.visibility = "visible";
+    }
+    else
+    {
+        domCfgFollowContainer.style.visibility = "hidden";
+    }
+});
+
+function OnReceive(jsonObj)
+{
+    console.log(`Received ${jsonObj}`);
+    console.dir(jsonObj);
+
+    let type = jsonObj["type"];
+
+    if (type == "REP_GET_CONFIGURATION")
+    {
+        // Pluck raw values
+        let name     = jsonObj["name"];
+        let location = jsonObj["location"];
+        let role     = jsonObj["role"];
+        let follow   = jsonObj["follow"];
+
+        console.log(`dispName: ${name}, loc: ${location}, role: ${role}, follow: ${follow}`);
+
+        // Process values to fit page enumerations
+        if      (location == "FRONT_TIRE")   { location = "FT"; }
+        else if (location == "MIDDLE_FRAME") { location = "MF"; }
+        else if (location == "BACK_TIRE")    { location = "BT"; }
+
+        // fill out configurable elements
+        domCfgName.value     = name;
+        domCfgLocation.value = location;
+        domCfgRole.value     = role;
+        domCfgFollow.value   = follow;
+
+        domCfgContainer.style.visibility = "visible";
+
+        if (domCfgLocation.value == "MF")
+        {
+            domCfgRole.disabled = false;
+        }
+        else
+        {
+            domCfgRole.disabled = true;
+        }
+
+        if (domCfgRole.value == "Follower")
+        {
+            domCfgFollowContainer.style.visibility = "visible";
+        }
+        else
+        {
+            domCfgFollowContainer.style.visibility = "hidden";
+        }
+    }
+    else if (type == "REP_PUT_CONFIGURATION")
+    {
+        let err = jsonObj["err"];
+
+        if (err == "")
+        {
+            ShowCfgModal(`Save success!<br/><br/>Device now disconnected.`);
+            domCfgSelect.click();
+        }
+        else if (err != "")
+        {
+            let errStr = err.split("\n").join("<br/>");
+
+            ShowCfgModal(`Save failed!<br/><br/>Please correct any errors and try again!<br/><br/>${errStr}`);
+        }
+    }
+}
+
+let cfgQueue = [];
+async function CfgSend(obj)
+{
+    if (glowBikeConfiguration == null) return;
+
+    let objJson = JSON.stringify(obj)
+
+    cfgQueue.push(objJson);
+
+    if (cfgQueue.length == 1)
+    {
+        while (cfgQueue.length)
+        {
+            let objJsonSend = cfgQueue[0];
+            
+            try
+            {
+                console.log(`sending ${objJsonSend}`);
+                await glowBikeConfiguration.Send(objJsonSend);
+            }
+            catch (e)
+            {
+                console.log(`Send issue: ${e}`);
+            }
+
+            cfgQueue.shift();
+        }
+    }
+}
+
+async function OnSelectForConfiguration()
+{
+    // ensure hidden elements are hidden
+    domCfgContainer.style.visibility       = "hidden";
+    domCfgFollowContainer.style.visibility = "hidden";
+
+    // attempt connection
+    let ok = await glowBike.Connect();
+    if (ok)
+    {
+        domCfgStatus.innerHTML = `Connected`;
+
+        domCfgSelect.innerHTML = "Disconnect";
+        domCfgContainer.style.visibility = "visible";
+
+        // get handle to configuration service
+        glowBikeConfiguration = glowBike.GetConfigurationService();
+
+        // handle events from service
+        glowBikeConfiguration.SetOnReceiveCallback(str => {
+            let jsonObj = {};
+            let process = true;
+
+            try
+            {
+                jsonObj = JSON.parse(str);
+            }
+            catch (e)
+            {
+                process = false;
+                console.log(`Could not parse json from str "${str}": ${e}`);
+            }
+
+            if (process)
+            {
+                OnReceive(jsonObj);
+            }
+        });
+        
+        // request current configuration
+        setTimeout(() => {
+            CfgSend({
+                type: "REQ_BLINK",
+            });
+            CfgSend({
+                type: "REQ_GET_CONFIGURATION",
+            });
+        }, 100);
+    }
+    else
+    {
+        if (glowBike.GetName() != "")
+        {
+            domCfgStatus.innerHTML = `Could not connect to ${glowBike.GetName()}`;
+        }
+        else
+        {
+            domCfgStatus.innerHTML = `Could not connect`;
+        }
+    }
+}
 
 function SetupGlowBikeConfigurationScreen()
 {
-
+    domCfgSelect.addEventListener('click', e => {
+        if (domCfgSelect.innerHTML == "Select")
+        {
+            OnSelectForConfiguration();
+        }
+        else
+        {
+            glowBike.Disconnect();
+            domCfgSelect.innerHTML = "Select";
+            domCfgContainer.style.visibility = "hidden";
+        }
+    });
 }
 
 function StartGlowBikeConfigurationScreen()
 {
     console.log(`Starting Configuration Screen`);
 
-    domMenuspacer.style.height = MENU_HEIGHT;
+    domMenuspacer.style.height = `${MENU_HEIGHT}px`;
 }
 
 function StopGlowBikeConfigurationScreen()
 {
-    console.log(`Stopping Configuration Screen`);
+    console.log(`Stopping Configuration Screen ${domCfgSelect.value}`);
+
+    if (domCfgSelect.innerHTML != "Select")
+    {
+        console.log(`  Calling Disconnect/Cancel`);
+        domCfgSelect.click();
+    }
 }
 </script>
 
@@ -382,7 +751,7 @@ function StopGlowBikeConfigurationScreen()
     <span></span>
     <br/>
     <br/>
-    <button onclick="this.parentNode.close()">OK</button>
+    <button onclick="CloseModal()">OK</button>
 </dialog>
 
 <div id="GlowBikeControlScreen" class="flex-vertical gap-between">
@@ -437,8 +806,8 @@ function StopGlowBikeConfigurationScreen()
 
 let colorWheel;
 
-domModal     = document.getElementById("GlowBikeControlScreenModal");
-domModalText = this.domModal.childNodes[1];
+let domModal     = document.getElementById("GlowBikeControlScreenModal");
+let domModalText = domModal.childNodes[1];
 
 let domCheckRed   = document.getElementById('rCheck');
 let domCheckGreen = document.getElementById('gCheck');
@@ -454,6 +823,23 @@ let domConnect    = document.getElementById('connectToggle');
 let domStartPause = document.getElementById('bStartPause');
 let domStop       = document.getElementById('bStop');
 
+
+/////////////////////////////////////////////////////////////////////
+// Modal Control
+/////////////////////////////////////////////////////////////////////
+
+function ShowModal(str)
+{
+    domModalText.innerHTML = str;
+    domModal.showModal();
+    domModal.style.visibility = "visible";
+}
+
+function CloseModal()
+{
+    domModal.close();
+    domModal.style.visibility = "hidden";
+}
 
 /////////////////////////////////////////////////////////////////////
 // Button Control
@@ -510,7 +896,7 @@ class ConnectButton
             domConnect.value = "Connecting";
             domConnect.style = "background-color: yellow; border: yellow;";
 
-            glowBike.Connect();
+            glowBike.ConnectLeader();
 
             this.state = stateNew;
         }
@@ -557,8 +943,7 @@ class ConnectButton
                 domConnect.style = "";
 
                 console.log(`GlowBike wasn't Leader`);
-                domModalText.innerHTML = `The selected device, ${glowBike.GetName()}, is not a Glow Bike Leader.<br/><br/>Please select the Glow Bike Leader device you wish to control.`;
-                domModal.showModal();
+                ShowModal(`The selected device, ${glowBike.GetName()}, is not a Glow Bike Leader.<br/><br/>Please select the Glow Bike Leader device you wish to control.`);
 
                 // notice the careful sequence here, state change first, then disconnect.
                 // the disconnect will fire a callback, and we simply ignore going from
@@ -579,8 +964,7 @@ class ConnectButton
             {
                 console.log(`Connect Failed`);
     
-                domModalText.innerHTML = `Could not connect to selected device ${glowBike.GetName()}.<br/><br/>Please try again or select another device.`;
-                domModal.showModal();
+                ShowModal(`Could not connect to selected device ${glowBike.GetName()}.<br/><br/>Please try again or select another device.`);
             }
 
             this.state = stateNew;
@@ -950,10 +1334,33 @@ function StopGlowBikeControlScreen()
 <script>
 'strict';
 
+function HandleDesktop()
+{
+    if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) == false)
+    {
+        let width = `400px`;
+        let height = `600px`;
+
+        document.getElementsByTagName("html")[0].style.height = height;
+        document.getElementsByTagName("html")[0].style.width = width;
+
+        document.body.style.height = height;
+        document.body.style.width = width;
+
+        document.getElementById("GlowBikeControlScreen").style.height = height;
+        document.getElementById("GlowBikeControlScreen").style.width = width;
+
+        document.getElementById("GlowBikeConfigurationScreen").style.height = height;
+        document.getElementById("GlowBikeConfigurationScreen").style.width = width;
+    }
+}
+
 window.addEventListener('DOMContentLoaded', e => {
-    SetupGlowBikeConfigurationScreen();
+    HandleDesktop();
+
     SetupGlowBikeControlScreen();
     SetupMenu();
+    SetupGlowBikeConfigurationScreen();
 
     SwitchTo("Control");
 });
