@@ -45,8 +45,24 @@ class GlowBikeConfigurationService
             let str = new TextDecoder().decode(arrayBuffer);
             
             console.log(`OnNotify: "${str}"`);
-            
-            this.fnOnReceive_(str);
+
+            let jsonObj = {};
+            let process = true;
+
+            try
+            {
+                jsonObj = JSON.parse(str);
+            }
+            catch (e)
+            {
+                process = false;
+                console.log(`Could not parse json from str "${str}": ${e}`);
+            }
+
+            if (process)
+            {
+                this.fnOnReceive_(jsonObj);
+            }
         });
         
         this.ctc_.Subscribe();
