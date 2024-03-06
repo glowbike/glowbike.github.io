@@ -1315,10 +1315,10 @@ class CheckOperator
 
                 ShowModal(
 `
-Change the period of the automatic color cycling:<br/><br/>
+Change the interval of the automatic color fading:<br/><br/>
 
 
-Red: (<span id='redValDisp'>${(periodRedMs / 1000).toFixed(1)}</span> Seconds Period)<br/>
+Red: (<span id='redValDisp'>${(periodRedMs / 1000).toFixed(1)}</span> Seconds Interval)<br/>
 <input id='redVal' type='range' min='100' max='30000' step='100' value='${periodRedMs}'
 onInput='
 document.getElementById("redValDisp").innerHTML = (this.value / 1000).toFixed(1);
@@ -1329,7 +1329,7 @@ onChange='TransmitSetColorConfig();'
 
 <br/><br/>
 
-Green: (<span id='greenValDisp'>${(periodGreenMs / 1000).toFixed(1)}</span> Seconds Period)<br/>
+Green: (<span id='greenValDisp'>${(periodGreenMs / 1000).toFixed(1)}</span> Seconds Interval)<br/>
 <input id='greenVal' type='range' min='100' max='30000' step='100' value='${periodGreenMs}'
 onInput='
 document.getElementById("greenValDisp").innerHTML = (this.value / 1000).toFixed(1);
@@ -1340,7 +1340,7 @@ onChange='TransmitSetColorConfig();'
 
 <br/><br/>
 
-Blue: (<span id='blueValDisp'>${(periodBlueMs / 1000).toFixed(1)}</span> Seconds Period)<br/>
+Blue: (<span id='blueValDisp'>${(periodBlueMs / 1000).toFixed(1)}</span> Seconds Interval)<br/>
 <input id='blueVal' type='range' min='100' max='30000' step='100' value='${periodBlueMs}'
 onInput='
 document.getElementById("blueValDisp").innerHTML = (this.value / 1000).toFixed(1);
