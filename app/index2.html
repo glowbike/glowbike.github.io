@@ -557,6 +557,7 @@ async function OnSelectForConfiguration()
         setTimeout(() => {
             CfgSend({
                 type: "REQ_BLINK",
+                count: 5,
             });
             CfgSend({
                 type: "REQ_GET_CONFIGURATION",
