@@ -27,7 +27,18 @@
 
     "description": "Glow Bike App -- Control your bike's glowing lights.  Check out more at https://glow.bike or follow us in Instagram at @glow.bike.",
     "screenshots": [
-
+        {
+            "src": "./screenshot1.png",
+            "sizes": "1080x2200",
+            "type": "image/png",
+            "form_factor": "narrow"
+        },
+        {
+            "src": "./screenshot2.jpg",
+            "sizes": "1080x2200",
+            "type": "image/jpg",
+            "form_factor": "narrow"
+        }
     ],
     "categories": ["personalization"]
 }
