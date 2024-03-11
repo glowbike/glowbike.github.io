@@ -1515,12 +1515,52 @@ function HandleDesktop()
     }
 }
 
+let wakeLock = null;
+
+async function GetWakeLock()
+{
+    if ("wakelock" in navigator)
+    {
+        try
+        {
+            wakeLock = await navigator.wakeLock.request("screen");
+
+            wakeLock.addEventListener("release", () => {
+                wakeLock = null;
+
+                console.log(`wake lock released`);
+            });
+
+            document.addEventListener("visibilitychange", async () => {
+                if (wakeLock !== null && document.visibilityState === "visible")
+                {
+                    console.log(`wake lock might be possible again, trying`);
+
+                    GetWakeLock();
+                }
+            });
+
+            console.log(`wake lock acquired`)
+        }
+        catch (e)
+        {
+            console.log(`Wakelock ERR: ${e}`);
+        }
+    }
+    else
+    {
+        console.log(`wake lock not possible`)
+    }
+}
+
 window.addEventListener('DOMContentLoaded', e => {
     HandleDesktop();
 
     SetupGlowBikeControlScreen();
     SetupMenu();
     SetupGlowBikeConfigurationScreen();
+    
+    GetWakeLock();
 
     SwitchTo("Control");
 });
