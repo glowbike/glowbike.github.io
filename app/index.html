@@ -1454,7 +1454,12 @@ function SetupHeights()
         }
     }
 
-    let inputRowList = gbcContainer.getElementsByClassName("inputRow");
+    let inputRowListDynamic = gbcContainer.getElementsByClassName("inputRow");
+    let inputRowList = [];
+    for (let inputRow of inputRowListDynamic)
+    {
+        inputRowList.push(inputRow);
+    }
     for (let inputRow of inputRowList)
     {
         inputRow.style.height = `${height}px`;
