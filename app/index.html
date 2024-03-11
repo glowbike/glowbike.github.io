@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1" viewport-fit="cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Web-App Settings -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -1439,6 +1439,12 @@ function SetupHeights()
         {
             input.style.height = `${height}px`;
         }
+    }
+
+    let inputRowList = gbcContainer.getElementsByClassName("inputRow");
+    for (let inputRow of inputRowList)
+    {
+        inputRow.style.height = `${height}px`;
     }
 }
 
