@@ -1530,6 +1530,14 @@ function StopGlowBikeControlScreen()
 <script>
 'strict';
 
+function SetupServiceWorker()
+{
+    if ("serviceWorker" in navigator)
+    {
+        navigator.serviceWorker.register("./sw.js");
+    }
+}
+
 function HandleDesktop()
 {
     if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) == false)
@@ -1590,6 +1598,8 @@ async function GetWakeLock()
 }
 
 window.addEventListener('DOMContentLoaded', e => {
+    SetupServiceWorker();
+
     HandleDesktop();
 
     SetupGlowBikeControlScreen();
