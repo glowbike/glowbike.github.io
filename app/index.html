@@ -1445,6 +1445,7 @@ function SetupHeights()
     for (let inputRow of inputRowList)
     {
         inputRow.style.height = `${height}px`;
+        delete inputRow.style.flex;
     }
 }
 
