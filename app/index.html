@@ -677,16 +677,29 @@ function StopGlowBikeConfigurationScreen()
         flex: 1;
     }
     
-    .inputRow, .buttonRow {
+    .inputRow {
         display: flex;
         flex-direction: row;
         flex: 1;
         align-items: center;
+        /* make it easier to get to 100% without falling off the screen */
+        margin-right: 5px;
     }
 
-    /* make it easier to get to 100% without falling off the screen */
-    .inputRow {
+    .inputRowNoFlex {
+        display: flex;
+        flex-direction: row;
+        /* flex: 1; */
+        align-items: center;
+        /* make it easier to get to 100% without falling off the screen */
         margin-right: 5px;
+    }
+
+    .buttonRow {
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+        align-items: center;
     }
     
     #colorwheel-container {
@@ -1445,7 +1458,8 @@ function SetupHeights()
     for (let inputRow of inputRowList)
     {
         inputRow.style.height = `${height}px`;
-        delete inputRow.style.flex;
+        inputRow.classList.remove("inputRow");
+        inputRow.classList.add("inputRowNoFlex");
     }
 }
 
